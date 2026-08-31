@@ -1,478 +1,1281 @@
-import React, { useState, useEffect } from 'react';
-import { Navigate, useNavigate, useLocation } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import api from '../services/api';
-import Sidebar from '../components/Sidebar';
-import Navbar from '../components/Navbar';
-import ScoreCard from '../components/ScoreCard';
-import IssuesTable from '../components/IssuesTable';
-import AlertsPanel from '../components/AlertsPanel';
-import toast from 'react-hot-toast';
+import React, { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
+import bannerBg from "../assets/images/banner-bg.jpg";
+import {
+  Home,
+  FolderOpen,
+  PenLine,
+  LayoutGrid,
+  Palette,
+  Megaphone,
+  Sparkles,
+  Library,
+  BarChart3,
+  Heart,
+  Trash2,
+  Settings,
+  CircleHelp,
+  LogOut,
+  Search,
+  Command,
+  Bell,
+  ChevronDown,
+  Plus,
+  Flame,
+  Trophy,
+  ArrowUpRight,
+  BookOpen,
+  ClipboardList,
+  CalendarDays,
+  Check,
+  Table2,
+  FileImage,
+  Bot,
+  GraduationCap,
+  FileText,
+  Download,
+  Link2,
+  Eye,
+  Clock3,
+  XCircle,
+  Pencil,
+  PieChart,
+  Lightbulb,
+  Users,
+  Zap,
+  Menu,
+  Box,
+  LayoutDashboard,
+  Wand2,
+  Upload,
+  File,
+  Target,
+  MessageSquare,
+  Image as ImageIcon,
+  Calendar,
+  Clock,
+  AlertCircle,
+  RefreshCw,
+  CheckCircle,
+  X,
+  Copy,
+  Share2,
+  Globe,
+  Star,
+  ShoppingBag,
+  TrendingUp,
+  Award,
+  Layers,
+  Crown,
+  ChevronLeft,
+  ChevronRight,
+  BadgeCheck,
+  Store,
+  ShoppingCart,
+} from "lucide-react";
+import Sidebar from "../components/Sidebar";
+import Navbar from "../components/Navbar";
+import api from "../services/api";
+import { useAuth } from "../context/AuthContext";
+import {
+  Area,
+  AreaChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+  Bar,
+  BarChart,
+  Cell,
+  Legend,
+} from "recharts";
 
-const Dashboard = () => {
-  const { token, user } = useAuth();
+const SERVER_URL = import.meta.env.VITE_SERVER_URL || "http://localhost:5000";
+
+const statTone = {
+  purple: {
+    box: "bg-[#f2efff]",
+    icon: "text-[#6648e7]",
+    value: "text-[#111827]",
+  },
+  green: {
+    box: "bg-[#edfbf2]",
+    icon: "text-[#16a34a]",
+    value: "text-[#111827]",
+  },
+  orange: {
+    box: "bg-[#fff4e8]",
+    icon: "text-[#f97316]",
+    value: "text-[#111827]",
+  },
+  blue: {
+    box: "bg-[#edf5ff]",
+    icon: "text-[#3b82f6]",
+    value: "text-[#111827]",
+  },
+  red: { box: "bg-[#fff0f1]", icon: "text-[#ef4444]", value: "text-[#ef4444]" },
+};
+
+const bestSellersData = [
+  {
+    title: "Guide",
+    count: "12.4K",
+    products: "products",
+    icon: BookOpen,
+    type: "guide",
+  },
+  {
+    title: "Workbook",
+    count: "9.8K",
+    products: "products",
+    icon: BookOpen,
+    type: "workbook",
+  },
+  {
+    title: "Planner",
+    count: "8.7K",
+    products: "products",
+    icon: CalendarDays,
+    type: "planner",
+  },
+  {
+    title: "Checklist",
+    count: "7.2K",
+    products: "products",
+    icon: Check,
+    type: "checklist",
+  },
+  {
+    title: "Spreadsheet",
+    count: "6.1K",
+    products: "products",
+    icon: Table2,
+    type: "spreadsheet",
+  },
+  {
+    title: "Template",
+    count: "5.6K",
+    products: "products",
+    icon: LayoutGrid,
+    type: "template",
+  },
+  {
+    title: "Prompt Pack",
+    count: "4.8K",
+    products: "products",
+    icon: Bot,
+    type: "prompt",
+  },
+  {
+    title: "Mini Course",
+    count: "4.2K",
+    products: "products",
+    icon: GraduationCap,
+    type: "course",
+  },
+  {
+    title: "Challenge",
+    count: "3.9K",
+    products: "products",
+    icon: Flame,
+    type: "challenge",
+  },
+  {
+    title: "Ebook",
+    count: "3.2K",
+    products: "products",
+    icon: BookOpen,
+    type: "ebook",
+  },
+  {
+    title: "Worksheet",
+    count: "2.7K",
+    products: "products",
+    icon: FileText,
+    type: "worksheet",
+  },
+];
+
+const topProductsData = [
+  {
+    rank: 1,
+    title: "Digital Marketing Mastery Guide",
+    type: "Guide",
+    sales: "2.4K",
+    revenue: "$12.5K",
+    tone: "purple",
+  },
+  {
+    rank: 2,
+    title: "AI Content Creation Prompts",
+    type: "Prompt Pack",
+    sales: "1.8K",
+    revenue: "$9.2K",
+    tone: "blue",
+  },
+  {
+    rank: 3,
+    title: "90-Day Business Challenge",
+    type: "Challenge",
+    sales: "1.6K",
+    revenue: "$7.8K",
+    tone: "orange",
+  },
+  {
+    rank: 4,
+    title: "Productivity Planner 2024",
+    type: "Planner",
+    sales: "1.4K",
+    revenue: "$6.9K",
+    tone: "blue",
+  },
+  {
+    rank: 5,
+    title: "Freelancer Income Tracker",
+    type: "Spreadsheet",
+    sales: "1.2K",
+    revenue: "$5.6K",
+    tone: "green",
+  },
+];
+
+const nichesData = [
+  {
+    name: "Health & Fitness",
+    value: "23.4K products",
+    icon: Heart,
+    tone: "purple",
+  },
+  {
+    name: "Business & Money",
+    value: "18.7K products",
+    icon: Library,
+    tone: "green",
+  },
+  {
+    name: "Personal Development",
+    value: "15.2K products",
+    icon: Lightbulb,
+    tone: "orange",
+  },
+  {
+    name: "AI & Technology",
+    value: "12.1K products",
+    icon: Sparkles,
+    tone: "blue",
+  },
+  { name: "Marketing", value: "9.8K products", icon: Link2, tone: "yellow" },
+];
+
+const marketChartData = [
+  { day: "Mon", sales: 45, revenue: 32, orders: 28 },
+  { day: "Tue", sales: 62, revenue: 48, orders: 35 },
+  { day: "Wed", sales: 38, revenue: 25, orders: 22 },
+  { day: "Thu", sales: 71, revenue: 55, orders: 42 },
+  { day: "Fri", sales: 56, revenue: 42, orders: 31 },
+  { day: "Sat", sales: 83, revenue: 68, orders: 49 },
+  { day: "Sun", sales: 94, revenue: 76, orders: 55 },
+];
+
+const categoryData = [
+  { name: "Guides", value: 87, color: "#FACC15" },
+  { name: "Workbooks", value: 56, color: "#e5b800" },
+  { name: "Planners", value: 47, color: "#f5d742" },
+  { name: "Checklists", value: 31, color: "#f7c936" },
+  { name: "Spreadsheets", value: 25, color: "#4bc38a" },
+  { name: "Others", value: 66, color: "#dfe2e7" },
+];
+
+const platformConfig = {
+  books: {
+    label: "Books",
+    icon: BookOpen,
+    color: "#4a6cf7",
+    bg: "bg-blue-50",
+    border: "border-blue-200",
+  },
+  gumroad: {
+    label: "Gumroad",
+    icon: ShoppingCart,
+    color: "#f78b2c",
+    bg: "bg-orange-50",
+    border: "border-orange-200",
+  },
+  payhip: {
+    label: "Payhip",
+    icon: Store,
+    color: "#4a6cf7",
+    bg: "bg-indigo-50",
+    border: "border-indigo-200",
+  },
+  etsy: {
+    label: "Etsy",
+    icon: ShoppingBag,
+    color: "#f4581b",
+    bg: "bg-red-50",
+    border: "border-red-200",
+  },
+  shopify: {
+    label: "Shopify",
+    icon: LayoutGrid,
+    color: "#5e8e3e",
+    bg: "bg-green-50",
+    border: "border-green-200",
+  },
+};
+
+const coverThemes = {
+  fitness: "from-[#2a8e7e] via-[#47aa94] to-[#1e766d]",
+  startup: "from-[#fff7e5] via-[#f1d98d] to-[#dfbb5b]",
+  prompts: "from-[#24103f] via-[#582273] to-[#190b2f]",
+  meal: "from-[#f5eee0] via-[#d8c6a6] to-[#f5eee8]",
+  productivity: "from-[#0f4b8b] via-[#2c69a2] to-[#103b6e]",
+  instagram: "from-[#f2eee7] via-[#f7f4ee] to-[#e6e2db]",
+};
+
+const quickActionsData = [
+  ["Create Product", Plus],
+  ["Browse Templates", LayoutGrid],
+  ["AI Generator", Sparkles],
+  ["Design Cover", FileImage],
+  ["Analytics", BarChart3],
+];
+
+const bestTone = {
+  guide: "bg-[#FACC15]/20 text-[#111820]",
+  workbook: "bg-[#effbf1] text-[#17a653]",
+  planner: "bg-[#fff0f4] text-[#ed3973]",
+  checklist: "bg-[#edfbf2] text-[#16a34a]",
+  spreadsheet: "bg-[#e9faff] text-[#0e9ab5]",
+  template: "bg-[#FACC15]/20 text-[#111820]",
+  prompt: "bg-[#FACC15]/20 text-[#111820]",
+  course: "bg-[#FACC15]/20 text-[#111820]",
+  challenge: "bg-[#fff2e9] text-[#f36b20]",
+  ebook: "bg-[#FACC15]/20 text-[#111820]",
+  worksheet: "bg-[#FACC15]/20 text-[#111820]",
+};
+
+const badgeTone = {
+  Guide: "bg-[#FACC15]/20 text-[#111820]",
+  "Prompt Pack": "bg-[#FACC15]/20 text-[#111820]",
+  Challenge: "bg-[#fff0df] text-[#f07828]",
+  Planner: "bg-[#eef6ff] text-[#3f83ee]",
+  Spreadsheet: "bg-[#e9fbf1] text-[#22a15b]",
+};
+
+// ================================================================
+// HELPER FUNCTIONS
+// ================================================================
+
+const getTheme = (productType) => {
+  const themeMap = {
+    guide: "startup",
+    workbook: "meal",
+    planner: "productivity",
+    checklists: "fitness",
+    "prompt-packs": "prompts",
+    templates: "instagram",
+    challenges: "fitness",
+    ebook: "startup",
+    worksheets: "productivity",
+    spreadsheets: "productivity",
+    "mini-courses": "prompts",
+  };
+  return themeMap[productType?.toLowerCase()] || "fitness";
+};
+
+const ProductCover = ({
+  theme = "fitness",
+  small = false,
+  coverImage = null,
+  title = "",
+}) => {
+  const size = small ? "h-[50px]" : "h-[180px]";
+  const shadow = small ? "shadow-sm" : "shadow-md";
+
+  if (coverImage) {
+    const imageUrl = coverImage.startsWith("http")
+      ? coverImage
+      : `${SERVER_URL}${coverImage}`;
+    return (
+      <div
+        className={`${size} relative shrink-0 overflow-hidden rounded-md ${shadow} bg-gray-100`}
+      >
+        <img
+          src={imageUrl}
+          alt={title || "Product"}
+          className="w-full h-full object-cover"
+          crossOrigin="anonymous"
+          onError={(e) => {
+            e.target.style.display = "none";
+            const parent = e.target.parentElement;
+            if (parent) {
+              parent.innerHTML = `<div class="w-full h-full flex items-center justify-center text-4xl bg-gray-100">📚</div>`;
+            }
+          }}
+        />
+      </div>
+    );
+  }
+
+  const themeClass = coverThemes[theme] || coverThemes.fitness;
+  const headline = {
+    fitness: "FITNESS\nCHALLENGE",
+    startup: "STARTUP\nGUIDE",
+    prompts: "AI\nPROMPTS",
+    meal: "MEAL PLAN\nWORKBOOK",
+    productivity: "PRODUCTIVITY\nPLANNER",
+    instagram: "INSTAGRAM\nGROWTH",
+  }[theme];
+
+  return (
+    <div
+      className={`${size} relative shrink-0 overflow-hidden rounded-md bg-gradient-to-br ${themeClass} ${shadow} transition-transform duration-300 hover:scale-105`}
+    >
+      <div className="absolute inset-x-0 top-0 h-1 bg-white/30" />
+      <div
+        className={`absolute whitespace-pre-line px-2 font-bold leading-[1.1] tracking-[-0.02em] ${
+          small ? "top-1 text-[6px]" : "top-3 text-[14px]"
+        } ${theme === "startup" || theme === "meal" || theme === "instagram" ? "text-[#161a1e]" : "text-white"}`}
+      >
+        {headline}
+      </div>
+      {!small && (
+        <div className="absolute bottom-2 left-2 h-1 w-6 rounded-full bg-white/40" />
+      )}
+    </div>
+  );
+};
+
+// ================================================================
+// MAIN DASHBOARD
+// ================================================================
+
+export default function Dashboard() {
+  const { user } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
-
-  // Google token check
-  const googleToken = new URLSearchParams(location.search).get('token');
-  
-  if (googleToken) {
-    localStorage.setItem('token', googleToken);
-    window.location.href = '/dashboard';
-    return null;
-  }
-
-  const [websites, setWebsites] = useState([]);
-  const [selectedWebsite, setSelectedWebsite] = useState(null);
-  const [latestScan, setLatestScan] = useState(null);
-  const [scanHistory, setScanHistory] = useState([]);
-  const [alerts, setAlerts] = useState([]);
+  const [trendingProducts, setTrendingProducts] = useState([]);
+  const [featuredProducts, setFeaturedProducts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [scanning, setScanning] = useState(false);
-  const [scanProgress, setScanProgress] = useState(0);
-  const [scanningStep, setScanningStep] = useState('');
-  const [scanOptions, setScanOptions] = useState({ maxPages: 10, scanDepth: 2 });
-  const [showPageDetails, setShowPageDetails] = useState(false);
-  const [scanMode, setScanMode] = useState('multi');
+  const [platformData, setPlatformData] = useState({});
+  const [platformLoading, setPlatformLoading] = useState(true);
 
-  if (!token) {
-    return <Navigate to="/login" />;
-  }
+  // Refs for scrollable sections
+  const trendingScrollRef = useRef(null);
+  const [showLeftTrendingArrow, setShowLeftTrendingArrow] = useState(false);
+  const [showRightTrendingArrow, setShowRightTrendingArrow] = useState(false);
+
+  const featuredScrollRef = useRef(null);
+  const [showLeftFeaturedArrow, setShowLeftFeaturedArrow] = useState(false);
+  const [showRightFeaturedArrow, setShowRightFeaturedArrow] = useState(false);
 
   useEffect(() => {
-    fetchWebsites();
-    fetchAlerts();
+    fetchAllProducts();
+    fetchPlatforms();
   }, []);
 
-  useEffect(() => {
-    if (selectedWebsite) {
-      const websiteId = selectedWebsite._id || selectedWebsite.id;
-      fetchLatestScan(websiteId);
-      fetchScanHistory(websiteId);
-    }
-  }, [selectedWebsite]);
+  // ✅ SCROLL HANDLERS FOR TRENDING - BOTH ARROWS ALWAYS SHOW
+  // ================================================================
+  // SCROLL HANDLERS - FIXED
+  // ================================================================
 
-  const fetchWebsites = async () => {
+  // ✅ SCROLL HANDLERS FOR TRENDING - FIXED
+  useEffect(() => {
+    // Wait for DOM to render
+    const timer = setTimeout(() => {
+      const container = trendingScrollRef.current;
+      if (container) {
+        const checkScroll = () => {
+          const isScrollable = container.scrollWidth > container.clientWidth;
+          console.log(
+            "Trending - isScrollable:",
+            isScrollable,
+            "scrollWidth:",
+            container.scrollWidth,
+            "clientWidth:",
+            container.clientWidth,
+          );
+
+          if (isScrollable) {
+            setShowLeftTrendingArrow(true);
+            setShowRightTrendingArrow(true);
+          } else {
+            setShowLeftTrendingArrow(false);
+            setShowRightTrendingArrow(false);
+          }
+        };
+
+        checkScroll();
+        container.addEventListener("scroll", checkScroll);
+        window.addEventListener("resize", checkScroll);
+
+        return () => {
+          container.removeEventListener("scroll", checkScroll);
+          window.removeEventListener("resize", checkScroll);
+        };
+      }
+    }, 300); // ✅ Delay to ensure DOM is ready
+
+    return () => clearTimeout(timer);
+  }, [trendingProducts]);
+
+  // ✅ SCROLL HANDLERS FOR FEATURED - FIXED
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const container = featuredScrollRef.current;
+      if (container) {
+        const checkScroll = () => {
+          const isScrollable = container.scrollWidth > container.clientWidth;
+          console.log(
+            "Featured - isScrollable:",
+            isScrollable,
+            "scrollWidth:",
+            container.scrollWidth,
+            "clientWidth:",
+            container.clientWidth,
+          );
+
+          if (isScrollable) {
+            setShowLeftFeaturedArrow(true);
+            setShowRightFeaturedArrow(true);
+          } else {
+            setShowLeftFeaturedArrow(false);
+            setShowRightFeaturedArrow(false);
+          }
+        };
+
+        checkScroll();
+        container.addEventListener("scroll", checkScroll);
+        window.addEventListener("resize", checkScroll);
+
+        return () => {
+          container.removeEventListener("scroll", checkScroll);
+          window.removeEventListener("resize", checkScroll);
+        };
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [featuredProducts]);
+
+  const scrollTrending = (direction) => {
+    const container = trendingScrollRef.current;
+    if (container) {
+      const scrollAmount =
+        direction === "left" ? -container.clientWidth : container.clientWidth;
+      container.scrollBy({ left: scrollAmount, behavior: "smooth" });
+    }
+  };
+
+  const scrollFeatured = (direction) => {
+    const container = featuredScrollRef.current;
+    if (container) {
+      const scrollAmount =
+        direction === "left" ? -container.clientWidth : container.clientWidth;
+      container.scrollBy({ left: scrollAmount, behavior: "smooth" });
+    }
+  };
+
+  const fetchAllProducts = async () => {
     try {
-      const response = await api.get('/websites');
-      setWebsites(response.data);
-      if (response.data.length > 0) {
-        setSelectedWebsite(response.data[0]);
+      setLoading(true);
+      const response = await api.get("/platforms/trending/all");
+      const allData = response.data?.data || [];
+      setTrendingProducts(allData);
+      try {
+        const featuredRes = await api.get("/platforms/featured");
+        const featuredData = featuredRes.data?.data || [];
+        setFeaturedProducts(featuredData);
+      } catch (err) {
+        setFeaturedProducts(allData.slice(0, 6));
       }
     } catch (error) {
-      toast.error('Failed to load websites');
+      console.error("Error fetching products:", error);
+      setTrendingProducts([]);
+      setFeaturedProducts([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchLatestScan = async (websiteId) => {
+  const fetchPlatforms = async () => {
     try {
-      const response = await api.get(`/scans/latest/${websiteId}`);
-      setLatestScan(response.data);
+      setPlatformLoading(true);
+      const response = await api.get("/platforms");
+      const data = response.data?.data?.byPlatform || {};
+      setPlatformData(data);
     } catch (error) {
-      console.error('Error fetching latest scan:', error);
-    }
-  };
-
-  const fetchScanHistory = async (websiteId) => {
-    try {
-      const response = await api.get(`/scans/${websiteId}`);
-      setScanHistory(response.data);
-    } catch (error) {
-      console.error('Error fetching scan history:', error);
-    }
-  };
-
-  const fetchAlerts = async () => {
-    try {
-      const response = await api.get('/alerts');
-      setAlerts(response.data);
-    } catch (error) {
-      console.error('Error fetching alerts:', error);
-    }
-  };
-
-  const simulateScanProgress = () => {
-    const steps = scanMode === 'single' 
-      ? [
-          { progress: 25, step: 'Analyzing SEO elements...' },
-          { progress: 50, step: 'Checking security headers...' },
-          { progress: 75, step: 'Verifying SSL certificates...' },
-          { progress: 100, step: 'Scan completed!' },
-        ]
-      : [
-          { progress: 10, step: 'Initializing scanner...' },
-          { progress: 20, step: 'Crawling website links...' },
-          { progress: 35, step: 'Analyzing SEO elements...' },
-          { progress: 50, step: 'Checking security headers...' },
-          { progress: 65, step: 'Verifying SSL certificates...' },
-          { progress: 75, step: 'Scanning compliance requirements...' },
-          { progress: 85, step: 'Testing performance metrics...' },
-          { progress: 95, step: 'Generating comprehensive report...' },
-        ];
-    
-    let currentStep = 0;
-    
-    const interval = setInterval(() => {
-      if (currentStep < steps.length) {
-        setScanProgress(steps[currentStep].progress);
-        setScanningStep(steps[currentStep].step);
-        currentStep++;
-      } else {
-        clearInterval(interval);
-      }
-    }, 800);
-    
-    return interval;
-  };
-
-  const handleScan = async () => {
-    if (!selectedWebsite) return;
-    
-    setScanning(true);
-    setScanProgress(0);
-    setScanningStep(scanMode === 'single' ? 'Starting single-page scan...' : 'Starting multi-page scan...');
-    
-    const progressInterval = simulateScanProgress();
-    const websiteId = selectedWebsite._id || selectedWebsite.id;
-    
-    try {
-      const payload = scanMode === 'single' 
-        ? { websiteId, maxPages: 1, scanDepth: 1 }
-        : { websiteId, maxPages: scanOptions.maxPages, scanDepth: scanOptions.scanDepth };
-      
-      const response = await api.post('/scans', payload);
-      
-      setScanProgress(100);
-      setScanningStep('Scan completed!');
-      
-      setTimeout(() => {
-        fetchLatestScan(websiteId);
-        fetchScanHistory(websiteId);
-        setScanning(false);
-        setScanProgress(0);
-        setScanningStep('');
-        toast.success(`Scan done! ${response.data.pagesScanned || 1} pages analyzed.`);
-      }, 1000);
-      
-    } catch (error) {
-      console.error('Error performing scan:', error);
-      toast.error('Scan failed.');
-      setScanning(false);
-      setScanProgress(0);
-      setScanningStep('');
+      console.error("Error fetching platforms:", error);
+      setPlatformData({});
     } finally {
-      clearInterval(progressInterval);
+      setPlatformLoading(false);
     }
   };
-
-  const getOverallScore = () => {
-    if (!latestScan) return 0;
-    return Math.round((latestScan.seoScore + latestScan.securityScore + 
-                       latestScan.complianceScore + latestScan.performanceScore) / 4);
-  };
-
-  if (loading) {
-    return (
-      <div className="flex">
-        <Sidebar />
-        <div className="flex-1 ml-0 md:ml-[18rem] flex justify-center items-center h-screen p-4">
-          <div className="text-center">
-            <div className="loader mx-auto mb-4"></div>
-            <p className="text-gray-500 text-sm">Loading dashboard...</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
-    <div className="flex">
+    <div className="flex min-h-screen bg-[#f5f6f8]">
       <Sidebar />
-      <div className="flex-1 ml-0 md:ml-[18rem] w-full min-w-0">
+      <div className="flex-1 ml-0 md:ml-[18rem] flex flex-col min-h-screen">
         <Navbar />
-        <main className="p-3 sm:p-4 md:p-6">
-          <div className="mx-auto max-w-full">
-            {/* Header */}
-            <div className="mb-4 sm:mb-6">
-              <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900">Dashboard</h1>
-              <p className="text-xs sm:text-sm md:text-base text-gray-600">Monitor your website's security and performance</p>
-            </div>
+        <main className="flex-1 p-4 md:p-6 overflow-y-auto">
+          <div className="flex flex-col lg:flex-row gap-6 w-full max-w-full">
+            {/* ===== LEFT COLUMN (70-75%) ===== */}
+            <div className="flex-1 min-w-0">
+              {/* ===== BANNER ===== */}
+              <div className="mb-6">
+                <div className="relative rounded-xl overflow-hidden shadow-lg p-6 md:p-8">
+                  <div
+                    className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+                    style={{ backgroundImage: `url(${bannerBg})` }}
+                  ></div>
 
-            {/* Website Selector and Scan Controls */}
-            <div className="bg-white rounded-lg shadow p-3 sm:p-4 mb-4 sm:mb-6">
-              <div className="flex flex-col gap-3 md:flex-row md:gap-4 md:items-end">
-                <div className="w-full md:flex-1">
-                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5">
-                    <i className="fas fa-globe mr-1 sm:mr-2 text-primary"></i>
-                    Select Website
-                  </label>
-                  <div className="relative">
-                    <select
-                      className="w-full appearance-none bg-gray-50 border border-gray-200 rounded-lg px-3 sm:px-4 py-2 sm:py-2.5 pr-8 sm:pr-10 text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent cursor-pointer"
-                      value={selectedWebsite?._id || selectedWebsite?.id || ''}
-                      onChange={(e) => {
-                        const website = websites.find(w => (w._id || w.id).toString() === e.target.value);
-                        setSelectedWebsite(website);
-                      }}
-                      disabled={scanning}
-                    >
-                      {websites.map((website, idx) => (
-                        <option key={website._id || website.id} value={website._id || website.id}>
-                          {idx === 0 && '⭐ '}{website.url}
-                        </option>
-                      ))}
-                    </select>
-                    <div className="absolute inset-y-0 right-0 flex items-center pr-2 sm:pr-3 pointer-events-none">
-                      <i className="fas fa-chevron-down text-gray-400 text-xs"></i>
-                    </div>
-                  </div>
-                </div>
-                
-                {/* Scan Mode Toggle */}
-                <div className="w-full md:w-auto">
-                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5">
-                    <i className="fas fa-toggle-on mr-1"></i>
-                    Scan Mode
-                  </label>
-                  <div className="flex rounded-lg overflow-hidden border border-gray-200 w-full md:w-auto">
-                    <button
-                      type="button"
-                      onClick={() => setScanMode('single')}
-                      className={`flex-1 md:flex-initial px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium transition-colors ${
-                        scanMode === 'single'
-                          ? 'bg-primary text-white'
-                          : 'bg-white text-gray-700 hover:bg-gray-50'
-                      }`}
-                    >
-                      <i className="fas fa-file-alt mr-1"></i>
-                      Single
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setScanMode('multi')}
-                      className={`flex-1 md:flex-initial px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium transition-colors ${
-                        scanMode === 'multi'
-                          ? 'bg-primary text-white'
-                          : 'bg-white text-gray-700 hover:bg-gray-50'
-                      }`}
-                    >
-                      <i className="fas fa-layer-group mr-1"></i>
-                      Multi
-                    </button>
-                  </div>
-                </div>
-                
-                {scanMode === 'multi' && (
-                  <div className="w-full md:w-32">
-                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5">
-                      <i className="fas fa-file-alt mr-1"></i>
-                      Max Pages
-                    </label>
-                    <select
-                      value={scanOptions.maxPages}
-                      onChange={(e) => setScanOptions({ ...scanOptions, maxPages: parseInt(e.target.value) })}
-                      className="w-full px-3 py-2 sm:py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-primary"
-                      disabled={scanning}
-                    >
-                      <option value="5">5 pages</option>
-                      <option value="10">10 pages</option>
-                      <option value="20">20 pages</option>
-                      <option value="50">50 pages</option>
-                    </select>
-                  </div>
-                )}
-                
-                <div className="w-full md:w-auto">
-                  <button
-                    onClick={handleScan}
-                    disabled={scanning}
-                    className="w-full bg-gradient-to-r from-primary to-secondary text-white px-4 sm:px-6 py-2 sm:py-2.5 rounded-lg hover:shadow-lg transition-all disabled:opacity-50 flex items-center justify-center gap-2 font-medium text-sm"
-                  >
-                    {scanning ? (
-                      <>
-                        <svg className="animate-spin h-4 w-4 sm:h-5 sm:w-5" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        <span className="text-xs sm:text-sm">Scanning... {scanProgress}%</span>
-                      </>
-                    ) : (
-                      <>
-                        <i className="fas fa-play text-xs"></i>
-                        <span className="text-xs sm:text-sm">{scanMode === 'single' ? 'Run Single-Page Scan' : 'Run Multi-Page Scan'}</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-              
-              {scanMode === 'multi' && scanOptions.maxPages > 10 && (
-                <div className="mt-3 text-[10px] sm:text-xs text-amber-600 bg-amber-50 p-2 rounded-lg">
-                  <i className="fas fa-info-circle mr-1"></i>
-                  Scanning {scanOptions.maxPages} pages may take a few minutes
-                </div>
-              )}
-              
-              {scanMode === 'single' && (
-                <div className="mt-3 text-[10px] sm:text-xs text-blue-600 bg-blue-50 p-2 rounded-lg">
-                  <i className="fas fa-info-circle mr-1"></i>
-                  Single-page scan will only analyze the homepage URL
-                </div>
-              )}
-            </div>
+                  <div className="absolute inset-0 bg-gradient-to-r from-[#1a1a2e] via-[#16213e] to-transparent"></div>
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-[#0f3460]/20"></div>
 
-            {/* Scan Progress Modal */}
-            {scanning && (
-              <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-3">
-                <div className="bg-white rounded-2xl p-5 sm:p-8 max-w-[95%] sm:max-w-md w-full shadow-2xl">
-                  <div className="text-center">
-                    <div className="w-14 h-14 sm:w-20 sm:h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-3 sm:mb-4">
-                      <svg className="w-7 h-7 sm:w-10 sm:h-10 text-primary animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                      </svg>
-                    </div>
-                    <h3 className="text-base sm:text-xl font-semibold text-gray-900 mb-2">Scanning Website</h3>
-                    <p className="text-gray-500 text-xs sm:text-sm mb-4">{scanningStep}</p>
-                    <div className="w-full bg-gray-200 rounded-full h-2 mb-4">
-                      <div className="bg-primary h-2 rounded-full transition-all duration-500" style={{ width: `${scanProgress}%` }}></div>
-                    </div>
-                    <p className="text-[10px] sm:text-xs text-gray-400">
-                      {scanMode === 'single' ? 'Scanning single page...' : `Scanning up to ${scanOptions.maxPages} pages...`}
-                    </p>
+                  <div className="absolute inset-0 opacity-5">
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-[#FACC15] rounded-full blur-3xl"></div>
+                    <div className="absolute bottom-0 left-0 w-48 h-48 bg-[#FACC15] rounded-full blur-3xl"></div>
                   </div>
-                </div>
-              </div>
-            )}
 
-            {/* Scan Stats Card */}
-            {latestScan && latestScan.pagesScanned && !scanning && (
-              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg shadow p-3 sm:p-4 mb-6 sm:mb-8">
-                <div className="grid grid-cols-2 sm:flex sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
-                  <div className="flex items-center gap-2 sm:gap-3">
-                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                      <i className="fas fa-file-alt text-primary text-base sm:text-xl"></i>
-                    </div>
-                    <div className="min-w-0">
-                      <div className="text-[10px] sm:text-sm text-gray-500">Pages Scanned</div>
-                      <div className="text-lg sm:text-2xl font-bold text-gray-900">{latestScan.pagesScanned || 1}</div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 sm:gap-3">
-                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
-                      <i className="fas fa-chart-line text-green-600 text-base sm:text-xl"></i>
-                    </div>
-                    <div className="min-w-0">
-                      <div className="text-[10px] sm:text-sm text-gray-500">Overall Score</div>
-                      <div className="text-lg sm:text-2xl font-bold text-green-600">{getOverallScore()}</div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 sm:gap-3">
-                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-purple-100 rounded-full flex items-center justify-center flex-shrink-0">
-                      <i className="fas fa-exclamation-triangle text-purple-600 text-base sm:text-xl"></i>
-                    </div>
-                    <div className="min-w-0">
-                      <div className="text-[10px] sm:text-sm text-gray-500">Total Issues</div>
-                      <div className="text-lg sm:text-2xl font-bold text-purple-600">{latestScan.issues?.length || 0}</div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 sm:gap-3">
-                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0">
-                      <i className="fas fa-clock text-orange-600 text-base sm:text-xl"></i>
-                    </div>
-                    <div className="min-w-0">
-                      <div className="text-[10px] sm:text-sm text-gray-500">Last Scan</div>
-                      <div className="text-xs sm:text-sm font-semibold text-gray-700">
-                        {new Date(latestScan.createdAt).toLocaleDateString()}
+                  <div className="relative flex flex-col md:flex-row items-center justify-between gap-6 z-10">
+                    <div className="flex-1 text-center md:text-left md:w-[55%]">
+                      <div className="flex items-center justify-center md:justify-start gap-2 mb-3">
+                        <span className="px-4 py-1.5 bg-[#FACC15]/20 text-[#FACC15] text-[12px] font-bold rounded-full border border-[#FACC15]/30">
+                          ✨ AI POWERED
+                        </span>
+                        <span className="px-4 py-1.5 bg-[#FACC15]/20 text-[#FACC15] text-[12px] font-bold rounded-full border border-[#FACC15]/30">
+                          🚀 GROWTH
+                        </span>
                       </div>
+
+                      <h2 className="text-3xl md:text-4xl font-bold text-white leading-tight">
+                        Hello, {user?.name || "Admin"}! 👋
+                      </h2>
+                      <p className="text-[#FACC15] text-xl md:text-2xl font-semibold mt-2">
+                        Build Your Etsy Empire, <br className="sm:hidden" />
+                        One Collection at a Time
+                      </p>
+                      <p className="text-gray-300 text-base md:text-lg mt-3 max-w-xl">
+                        AI finds profitable niches, creates stunning designs,{" "}
+                        <br className="hidden sm:block" />
+                        and publishes printables to Etsy that sell.
+                      </p>
+
+                      <button
+                        onClick={() => navigate("/create-product")}
+                        className="mt-5 px-8 py-3 bg-[#FACC15] hover:bg-[#e5b800] text-[#111820] font-semibold text-base rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl flex items-center gap-2 mx-auto md:mx-0"
+                      >
+                        <Sparkles size={20} />
+                        Find My Next Profitable Niche →
+                      </button>
                     </div>
                   </div>
+
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-[#FACC15]/5 rounded-full blur-2xl"></div>
+                  <div className="absolute bottom-0 left-1/2 w-48 h-48 bg-[#FACC15]/5 rounded-full blur-2xl"></div>
                 </div>
-                
-                {latestScan.pageDetails && latestScan.pageDetails.length > 0 && (
-                  <div className="mt-3 sm:mt-4 pt-3 border-t border-blue-200">
-                    <button
-                      onClick={() => setShowPageDetails(!showPageDetails)}
-                      className="text-xs sm:text-sm text-primary hover:underline flex items-center gap-1"
-                    >
-                      <i className={`fas fa-chevron-${showPageDetails ? 'up' : 'down'} text-[10px]`}></i>
-                      {showPageDetails ? 'Hide' : 'Show'} Page Details ({latestScan.pageDetails.length} pages)
-                    </button>
-                    
-                    {showPageDetails && (
-                      <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-60 overflow-y-auto">
-                        {latestScan.pageDetails.map((page, idx) => (
-                          <div key={idx} className="bg-white rounded-lg p-2 text-xs sm:text-sm">
-                            <div className="font-medium text-gray-800 truncate" title={page.url}>
-                              {page.url}
-                            </div>
-                            <div className="flex flex-wrap gap-2 sm:gap-3 mt-1 text-[10px] sm:text-xs">
-                              <span className="text-blue-600">SEO: {page.scores?.seo || 0}</span>
-                              <span className="text-green-600">Sec: {page.scores?.security || 0}</span>
-                              <span className="text-orange-600">Comp: {page.scores?.compliance || 0}</span>
-                              <span className="text-purple-600">Perf: {page.scores?.performance || 0}</span>
-                              <span className="text-red-500">Issues: {page.issuesCount || 0}</span>
-                            </div>
+              </div>
+
+              {/* ===== PLATFORM TRENDING ===== */}
+              <div className="mb-6">
+                <div className="flex items-center justify-between flex-wrap gap-2 mb-4">
+                  <div className="flex items-center gap-3">
+                    <TrendingUp
+                      size={22}
+                      className="text-[#FACC15]"
+                      strokeWidth={2.2}
+                    />
+                    <h2 className="text-xl font-bold text-[#172033]">
+                      Trending Across Platforms
+                    </h2>
+                    <span className="text-[13px] text-[#89919d]">
+                      Most popular products by platform
+                    </span>
+                  </div>
+                </div>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  {["books", "gumroad", "etsy", "shopify"].map((platform) => {
+                    const config = platformConfig[platform];
+                    const Icon = config.icon;
+                    const products = platformData[platform] || [];
+
+                    const platformScrollRef = useRef(null);
+                    const [showLeftArrow, setShowLeftArrow] = useState(false);
+                    const [showRightArrow, setShowRightArrow] = useState(false);
+
+                    useEffect(() => {
+                      const container = platformScrollRef.current;
+                      if (container) {
+                        const checkScroll = () => {
+                          const isScrollable =
+                            container.scrollWidth > container.clientWidth;
+                          if (isScrollable) {
+                            setShowLeftArrow(true);
+                            setShowRightArrow(true);
+                          } else {
+                            setShowLeftArrow(false);
+                            setShowRightArrow(false);
+                          }
+                        };
+
+                        setTimeout(checkScroll, 100);
+                        container.addEventListener("scroll", checkScroll);
+                        window.addEventListener("resize", checkScroll);
+
+                        return () => {
+                          container.removeEventListener("scroll", checkScroll);
+                          window.removeEventListener("resize", checkScroll);
+                        };
+                      }
+                    }, [products]);
+
+                    const scrollPlatform = (direction) => {
+                      const container = platformScrollRef.current;
+                      if (container) {
+                        const scrollAmount = direction === "left" ? -300 : 300;
+                        container.scrollBy({
+                          left: scrollAmount,
+                          behavior: "smooth",
+                        });
+                      }
+                    };
+
+                    return (
+                      <div
+                        key={platform}
+                        className="rounded-xl border border-[#edf0f4] bg-white p-4 shadow-sm"
+                      >
+                        <div className="flex items-center gap-3 mb-3">
+                          <div className={`p-2.5 rounded-lg ${config.bg}`}>
+                            <Icon size={20} className="text-[#111820]" />
                           </div>
-                        ))}
+                          <div>
+                            <h3 className="text-[15px] font-bold text-[#172033]">
+                              {config.label}
+                            </h3>
+                            <span className="text-[11px] text-[#89919d]">
+                              Trending products
+                            </span>
+                          </div>
+                          <button className="ml-auto text-[11px] font-semibold text-[#FACC15] hover:text-[#e5b800] transition-colors duration-200">
+                            View All
+                          </button>
+                        </div>
+
+                        {platformLoading ? (
+                          <div className="flex justify-center py-6">
+                            <div className="w-6 h-6 border-3 border-[#FACC15] border-t-transparent rounded-full animate-spin"></div>
+                          </div>
+                        ) : products.length === 0 ? (
+                          <div className="text-center py-6 text-[#6B7280]">
+                            <p className="text-[12px]">No products available</p>
+                          </div>
+                        ) : (
+                          <div className="relative">
+                            {showLeftArrow && (
+                              <button
+                                onClick={() => scrollPlatform("left")}
+                                className="absolute left-0 top-1/2 -translate-y-1/2 z-10 p-1.5 rounded-full bg-white shadow-md border border-[#E5E7EB] hover:bg-[#F8F8F6] hover:border-[#FACC15] transition-all duration-200 -ml-2"
+                              >
+                                <ChevronLeft
+                                  size={18}
+                                  className="text-[#6B7280]"
+                                />
+                              </button>
+                            )}
+
+                            <div
+                              ref={platformScrollRef}
+                              className="flex gap-3 overflow-x-auto pb-2 hide-scrollbar px-2"
+                              style={{
+                                scrollbarWidth: "none",
+                                msOverflowStyle: "none",
+                              }}
+                            >
+                              {products.slice(0, 5).map((product) => (
+                                <div
+                                  key={
+                                    product._id || product.id || product.title
+                                  }
+                                  className="group relative flex-shrink-0 w-[180px] sm:w-[200px] cursor-pointer transition-all duration-300"
+                                >
+                                  {/* ===== AMAZON-STYLE CARD ===== */}
+                                  <div className="bg-white rounded-xl border border-[#E5E7EB] overflow-hidden shadow-sm hover:shadow-xl transition-all duration-300">
+                                    {/* ===== PRODUCT IMAGE ===== */}
+                                    <div className="relative aspect-square bg-white p-4 flex items-center justify-center overflow-hidden">
+                                      <ProductCover
+                                        theme={getTheme(product.productType)}
+                                        coverImage={
+                                          product.coverImage || product.coverUrl
+                                        }
+                                        title={product.title}
+                                      />
+
+                                      {/* ===== BADGES ===== */}
+                                      <div className="absolute top-2 left-2 flex flex-col gap-1">
+                                        {product.bestSeller && (
+                                          <span className="px-2 py-0.5 bg-[#FACC15] text-[#111820] text-[8px] font-bold rounded-full shadow-sm">
+                                            Best Seller
+                                          </span>
+                                        )}
+                                        {product.discount && (
+                                          <span className="px-2 py-0.5 bg-red-500 text-white text-[8px] font-bold rounded-full shadow-sm">
+                                            -{product.discount}%
+                                          </span>
+                                        )}
+                                      </div>
+                                    </div>
+
+                                    {/* ===== PRODUCT INFO ===== */}
+                                    <div className="p-3 space-y-1.5">
+                                      {/* ===== RATING ===== */}
+                                      <div className="flex items-center gap-1">
+                                        <div className="flex items-center">
+                                          <Star
+                                            size={12}
+                                            className="fill-[#FACC15] text-[#FACC15]"
+                                          />
+                                          <Star
+                                            size={12}
+                                            className="fill-[#FACC15] text-[#FACC15]"
+                                          />
+                                          <Star
+                                            size={12}
+                                            className="fill-[#FACC15] text-[#FACC15]"
+                                          />
+                                          <Star
+                                            size={12}
+                                            className="fill-[#FACC15] text-[#FACC15]"
+                                          />
+                                          <Star
+                                            size={12}
+                                            className="fill-[#FACC15] text-[#FACC15]"
+                                          />
+                                        </div>
+                                        <span className="text-[10px] font-medium text-[#6B7280]">
+                                          {product.rating || 4.5}
+                                        </span>
+                                        <span className="text-[10px] text-[#6B7280]">
+                                          (
+                                          {product.reviews ||
+                                            product.reviewCount ||
+                                            0}
+                                          )
+                                        </span>
+                                      </div>
+
+                                      {/* ===== TITLE ===== */}
+                                      <h3 className="text-[14px] font-medium text-[#111111] line-clamp-2 leading-snug min-h-[36px] group-hover:text-[#FACC15] transition-colors duration-200">
+                                        {product.title}
+                                      </h3>
+
+                                      {/* ===== PRICE ===== */}
+                                      <div className="flex items-end gap-2">
+                                        <span className="text-[18px] font-bold text-[#111827]">
+                                          ${product.price || "0"}
+                                        </span>
+                                        {product.originalPrice && (
+                                          <span className="text-[12px] text-[#6B7280] line-through">
+                                            ${product.originalPrice}
+                                          </span>
+                                        )}
+                                      </div>
+
+                                      {/* ===== BUY BUTTON ===== */}
+                                      <button
+                                        onClick={() => {
+                                          navigate("/create-product", {
+                                            state: {
+                                              productData: {
+                                                title: product.title || "",
+                                                productType:
+                                                  product.productType ||
+                                                  "guide",
+                                                niche: product.niche || "",
+                                                audience:
+                                                  product.audience || "",
+                                                problem: product.problem || "",
+                                                outcome: product.outcome || "",
+                                                tone:
+                                                  product.tone ||
+                                                  "Professional",
+                                                language:
+                                                  product.language || "English",
+                                                coverImage:
+                                                  product.coverImage ||
+                                                  product.coverUrl ||
+                                                  "",
+                                                price: product.price || "",
+                                                description:
+                                                  product.description || "",
+                                                authorName:
+                                                  product.authorName || "",
+                                                brandName:
+                                                  product.brandName || "",
+                                              },
+                                              isEdit: true,
+                                            },
+                                          });
+                                        }}
+                                        className="w-full mt-1.5 py-1.5 bg-[#FACC15] hover:bg-[#e5b800] text-[#111820] text-[12px] font-semibold rounded-lg transition-all duration-200 shadow-sm hover:shadow-md flex items-center justify-center gap-1.5"
+                                      >
+                                        <Plus size={13} />
+                                        Create
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+
+                            {showRightArrow && (
+                              <button
+                                onClick={() => scrollPlatform("right")}
+                                className="absolute right-0 top-1/2 -translate-y-1/2 z-10 p-1.5 rounded-full bg-white shadow-md border border-[#E5E7EB] hover:bg-[#F8F8F6] hover:border-[#FACC15] transition-all duration-200 -mr-2"
+                              >
+                                <ChevronRight
+                                  size={18}
+                                  className="text-[#6B7280]"
+                                />
+                              </button>
+                            )}
+                          </div>
+                        )}
                       </div>
-                    )}
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* ===== CHARTS ===== */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                <div className="rounded-xl border border-[#edf0f4] bg-white p-5 shadow-sm">
+                  <div className="flex items-center justify-between flex-wrap gap-2 mb-4">
+                    <div className="flex items-center gap-3">
+                      <TrendingUp
+                        size={22}
+                        className="text-[#FACC15]"
+                        strokeWidth={2.2}
+                      />
+                      <h2 className="text-xl font-bold text-[#172033]">
+                        Market Performance
+                      </h2>
+                      <span className="text-[13px] text-[#89919d]">
+                        This week
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-3 h-3 rounded-full bg-[#FACC15]" />
+                        <span className="text-[11px] text-[#6B7280]">
+                          Sales
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-3 h-3 rounded-full bg-[#e5b800]" />
+                        <span className="text-[11px] text-[#6B7280]">
+                          Revenue
+                        </span>
+                      </div>
+                      <span className="text-[12px] font-semibold text-[#16a34a]">
+                        ↑ 18.3%
+                      </span>
+                    </div>
                   </div>
-                )}
-              </div>
-            )}
+                  <div className="w-full" style={{ height: "220px" }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart
+                        data={marketChartData}
+                        margin={{ top: 10, right: 10, left: -10, bottom: 0 }}
+                      >
+                        <defs>
+                          <linearGradient
+                            id="salesGrad"
+                            x1="0"
+                            y1="0"
+                            x2="0"
+                            y2="1"
+                          >
+                            <stop
+                              offset="0%"
+                              stopColor="#FACC15"
+                              stopOpacity={0.3}
+                            />
+                            <stop
+                              offset="100%"
+                              stopColor="#FACC15"
+                              stopOpacity={0.02}
+                            />
+                          </linearGradient>
+                          <linearGradient
+                            id="revenueGrad"
+                            x1="0"
+                            y1="0"
+                            x2="0"
+                            y2="1"
+                          >
+                            <stop
+                              offset="0%"
+                              stopColor="#e5b800"
+                              stopOpacity={0.25}
+                            />
+                            <stop
+                              offset="100%"
+                              stopColor="#e5b800"
+                              stopOpacity={0.02}
+                            />
+                          </linearGradient>
+                        </defs>
+                        <CartesianGrid
+                          vertical={false}
+                          stroke="#f0f2f5"
+                          strokeDasharray="3 3"
+                        />
+                        <XAxis
+                          dataKey="day"
+                          axisLine={false}
+                          tickLine={false}
+                          tick={{ fontSize: 10, fill: "#9aa1ad" }}
+                        />
+                        <YAxis
+                          axisLine={false}
+                          tickLine={false}
+                          tick={{ fontSize: 10, fill: "#9aa1ad" }}
+                          ticks={[0, 25, 50, 75, 100]}
+                        />
+                        <Tooltip
+                          contentStyle={{
+                            borderRadius: 10,
+                            border: "1px solid #edf0f4",
+                            fontSize: 12,
+                            backgroundColor: "#fff",
+                            boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+                          }}
+                        />
+                        <Area
+                          type="monotone"
+                          dataKey="sales"
+                          stroke="#FACC15"
+                          strokeWidth={2.5}
+                          fill="url(#salesGrad)"
+                        />
+                        <Area
+                          type="monotone"
+                          dataKey="revenue"
+                          stroke="#e5b800"
+                          strokeWidth={2.5}
+                          fill="url(#revenueGrad)"
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="flex items-center justify-between mt-3 pt-3 border-t border-[#f0f2f5]">
+                    <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[12px] font-medium text-[#6B7280]">
+                          Total Sales:
+                        </span>
+                        <span className="text-[13px] font-bold text-[#111827]">
+                          449
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-[12px] font-medium text-[#6B7280]">
+                          Revenue:
+                        </span>
+                        <span className="text-[13px] font-bold text-[#111827]">
+                          $346
+                        </span>
+                      </div>
+                    </div>
+                    <span className="text-[12px] font-medium text-[#16a34a]">
+                      ↑ 12.5% vs last week
+                    </span>
+                  </div>
+                </div>
 
-            {/* Score Cards */}
-            {latestScan && !scanning && (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 md:gap-6 mb-6 sm:mb-8">
-                <ScoreCard title="SEO Score" score={latestScan.seoScore} color="blue" />
-                <ScoreCard title="Security Score" score={latestScan.securityScore} color="green" />
-                <ScoreCard title="Compliance Score" score={latestScan.complianceScore} color="orange" />
-                <ScoreCard title="Performance Score" score={latestScan.performanceScore} color="purple" />
+                <div className="rounded-xl border border-[#edf0f4] bg-white p-5 shadow-sm">
+                  <div className="flex items-center justify-between flex-wrap gap-2 mb-4">
+                    <div className="flex items-center gap-3">
+                      <BarChart3
+                        size={22}
+                        className="text-[#FACC15]"
+                        strokeWidth={2.2}
+                      />
+                      <h2 className="text-xl font-bold text-[#172033]">
+                        Category Distribution
+                      </h2>
+                      <span className="text-[13px] text-[#89919d]">
+                        By product type
+                      </span>
+                    </div>
+                    <span className="text-[12px] font-medium text-[#6B7280]">
+                      Total: 312 products
+                    </span>
+                  </div>
+                  <div className="w-full" style={{ height: "200px" }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        data={categoryData}
+                        margin={{ top: 10, right: 10, left: -10, bottom: 0 }}
+                        layout="vertical"
+                      >
+                        <CartesianGrid horizontal={false} stroke="#f0f2f5" />
+                        <XAxis
+                          type="number"
+                          axisLine={false}
+                          tickLine={false}
+                          tick={{ fontSize: 10, fill: "#9aa1ad" }}
+                        />
+                        <YAxis
+                          type="category"
+                          dataKey="name"
+                          axisLine={false}
+                          tickLine={false}
+                          tick={{
+                            fontSize: 11,
+                            fill: "#6B7280",
+                            fontWeight: 500,
+                          }}
+                          width={80}
+                        />
+                        <Tooltip
+                          contentStyle={{
+                            borderRadius: 10,
+                            border: "1px solid #edf0f4",
+                            fontSize: 12,
+                            backgroundColor: "#fff",
+                            boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+                          }}
+                          formatter={(value) => [`${value} products`, "Count"]}
+                        />
+                        <Bar dataKey="value" radius={[0, 8, 8, 0]} barSize={24}>
+                          {categoryData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
               </div>
-            )}
+            </div>
 
-            {/* Loading state */}
-            {!latestScan && !scanning && (
-              <div className="bg-white rounded-lg shadow p-8 sm:p-12 text-center mb-6 sm:mb-8">
-                <svg className="w-12 h-12 sm:w-16 sm:h-16 text-gray-300 mx-auto mb-3 sm:mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                <p className="text-gray-500 text-sm">No scan data available</p>
-                <p className="text-xs sm:text-sm text-gray-400 mt-2">Click "Run Scan" to start monitoring</p>
+            {/* ===== RIGHT SIDEBAR (25-30%) ===== */}
+            <div className="w-[300px] flex-shrink-0 space-y-4">
+              <div className="rounded-xl bg-gradient-to-br from-[#FACC15] to-[#e5b800] p-5 text-[#111820] shadow-lg">
+                <div className="flex justify-center">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/25">
+                    <Plus size={24} strokeWidth={2} />
+                  </div>
+                </div>
+                <h3 className="mt-3 text-center text-base font-bold">
+                  Create New Product
+                </h3>
+                <p className="mt-1.5 text-center text-[12px] leading-[1.4] text-[#111820]/80">
+                  Start creating your next digital product with AI
+                </p>
+                <button
+                  onClick={() => navigate("/create-product")}
+                  className="mt-3.5 flex h-10 w-full items-center justify-center rounded-lg bg-white text-[13px] font-bold text-[#111820] hover:shadow-md transition-all duration-200"
+                >
+                  <Plus size={15} className="mr-1.5" /> Create Now
+                </button>
               </div>
-            )}
 
-            {/* Issues and Alerts */}
-            {latestScan && !scanning && (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
-                <IssuesTable issues={latestScan.issues} pageDetails={latestScan.pageDetails} />
-                <AlertsPanel alerts={alerts} />
+              <div className="rounded-xl border border-[#edf0f4] bg-white p-5 shadow-sm">
+                <h3 className="text-[15px] font-bold text-[#263043]">
+                  Quick Actions
+                </h3>
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  {quickActionsData.map(([label, Icon]) => (
+                    <button
+                      key={label}
+                      onClick={() =>
+                        label === "Create Product" &&
+                        navigate("/create-product")
+                      }
+                      className="flex items-center gap-2 rounded-lg p-2.5 text-[12px] font-medium text-[#4d5664] hover:bg-[#FACC15]/10 transition-all duration-200"
+                    >
+                      <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#FACC15]/20 text-[#111820]">
+                        <Icon size={16} strokeWidth={1.8} />
+                      </span>
+                      {label}
+                    </button>
+                  ))}
+                </div>
               </div>
-            )}
+
+              <div className="rounded-xl border border-[#edf0f4] bg-white p-5 shadow-sm">
+                <div className="flex items-center gap-2.5">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#FACC15]/20 text-[#111820]">
+                    <Sparkles size={16} />
+                  </div>
+                  <h3 className="text-[15px] font-bold text-[#FACC15]">
+                    AI Insights
+                  </h3>
+                </div>
+                <p className="mt-2 text-[13px] leading-[1.6] text-[#687180]">
+                  Fitness, productivity and AI related products are trending
+                  this week.
+                </p>
+                <button className="mt-3.5 flex h-9 w-full items-center justify-center rounded-lg border-2 border-[#FACC15] text-[12px] font-semibold text-[#111820] hover:bg-[#FACC15] transition-all duration-200">
+                  Explore Trends
+                </button>
+              </div>
+
+              <div className="rounded-xl border border-[#edf0f4] bg-white p-5 shadow-sm">
+                <h3 className="text-[15px] font-bold text-[#263043]">
+                  Popular Niches
+                </h3>
+                <div className="mt-3 space-y-2.5">
+                  {nichesData.map((niche) => {
+                    const Icon = niche.icon;
+                    return (
+                      <div
+                        key={niche.name}
+                        className="flex items-center gap-3 group cursor-pointer rounded-lg p-2 hover:bg-[#f8f9fb] transition-colors duration-200"
+                      >
+                        <div
+                          className={[
+                            "flex h-8 w-8 items-center justify-center rounded-lg",
+                            niche.tone === "purple" &&
+                              "bg-[#f0ecff] text-[#704fe7]",
+                            niche.tone === "green" &&
+                              "bg-[#ebfbf1] text-[#1baa58]",
+                            niche.tone === "orange" &&
+                              "bg-[#fff0e4] text-[#f27828]",
+                            niche.tone === "blue" &&
+                              "bg-[#ebf5ff] text-[#3f82ec]",
+                            niche.tone === "yellow" &&
+                              "bg-[#FACC15]/20 text-[#111820]",
+                          ]
+                            .filter(Boolean)
+                            .join(" ")}
+                        >
+                          <Icon size={16} />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[13px] font-semibold text-[#364050] group-hover:text-[#FACC15] transition-colors duration-200">
+                            {niche.name}
+                          </p>
+                          <p className="text-[11px] text-[#8b93a0]">
+                            {niche.value}
+                          </p>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+                <button className="mt-3.5 flex h-9 w-full items-center justify-center rounded-lg bg-[#FACC15]/20 text-[12px] font-semibold text-[#111820] hover:bg-[#FACC15]/30 transition-all duration-200">
+                  View All <ArrowUpRight size={15} className="ml-1" />
+                </button>
+              </div>
+            </div>
           </div>
         </main>
       </div>
-
-      <style>{`
-        @media (max-width: 768px) {
-          .ml-64 {
-            margin-left: 0 !important;
-          }
-        }
-        @media (max-width: 320px) {
-          .ml-64 {
-            margin-left: 0 !important;
-          }
-          main {
-            padding: 0.5rem !important;
-          }
-        }
-      `}</style>
     </div>
   );
-};
-
-export default Dashboard;
+}

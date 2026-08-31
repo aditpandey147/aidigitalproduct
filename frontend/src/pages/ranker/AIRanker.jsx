@@ -33,12 +33,10 @@ const AIRanker = () => {
   const fetchAgents = async () => {
     setLoading(true);
     try {
-      console.log('📡 Fetching ranker agents...');
       const response = await api.get('/ai-ranker/agents');
       
       if (response.data?.success) {
         setAgents(response.data.agents);
-        console.log(`✅ Loaded ${response.data.agents.length} ranker agents`);
       } else {
         toast.error('Failed to load ranker agents');
       }
@@ -58,7 +56,6 @@ const AIRanker = () => {
     }
 
     try {
-      console.log('🚀 Opening ranker chat with:', agent.name);
       
       const response = await api.post('/ai-ranker/chat/new', { 
         agentSlug: agent.slug 
@@ -66,7 +63,6 @@ const AIRanker = () => {
       
       if (response.data?.success && response.data?.chat?.id) {
         const chatId = response.data.chat.id;
-        console.log('✅ Ranker chat created:', chatId);
         navigate(`/ai-ranker/chat/${chatId}`);
       } else {
         toast.error('Failed to create chat');

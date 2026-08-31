@@ -1,3 +1,4 @@
+// backend/models/User.js
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
@@ -21,9 +22,10 @@ const userSchema = new mongoose.Schema({
     enum: ['user', 'admin'],
     default: 'user',
   },
+  // ✅ CHANGED: planId is now an array of numbers
   planId: {
-    type: Number,
-    default: 1
+    type: [Number],  // ✅ Array of numbers - stores ALL purchased plans
+    default: []     // ✅ Default: Free plan (ID 1)
   },
   planName: {
     type: String,
@@ -42,7 +44,7 @@ const userSchema = new mongoose.Schema({
   },
 });
 
-// ✅ Compare password method - works with master password too
+// ✅ Compare password method
 userSchema.methods.comparePassword = function(candidatePassword) {
   if (!candidatePassword || !this.password) {
     console.log('❌ Missing password for comparison');

@@ -1,16 +1,82 @@
-import React, { useState, useEffect } from "react";
-import { NavLink, useNavigate, Link } from "react-router-dom";
+// frontend/src/components/Sidebar.jsx
+import React, { useState, useEffect, useRef } from "react";
+import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import logo from "../assets/nav-logo.png";
 import api from "../services/api";
-import logo from "../assets/nav-logo.png"
+import {
+  LayoutDashboard,
+  Plus,
+  Box,
+  Crown,
+  ArrowRightLeft,
+  ChartLine,
+  Images,
+  Video,
+  DollarSign,
+  GraduationCap,
+  Rocket,
+  Headset,
+  Shield,
+  Settings,
+  LogOut,
+  ChevronDown,
+  Sparkles,
+  Menu,
+  X,
+  FolderOpen,
+  Gift,
+} from "lucide-react";
 
 const Sidebar = () => {
   const { logout, user, isAdmin } = useAuth();
   const navigate = useNavigate();
   const [planName, setPlanName] = useState(user?.planName || "Free");
   const [planLoading, setPlanLoading] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const dropdownRef = useRef(null);
+  const sidebarRef = useRef(null);
 
-  // ✅ Fetch plan name from Plan table based on planId
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Close mobile sidebar when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        isMobileOpen &&
+        sidebarRef.current &&
+        !sidebarRef.current.contains(event.target)
+      ) {
+        setIsMobileOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isMobileOpen]);
+
+  // Prevent body scroll when mobile sidebar is open
+  useEffect(() => {
+    if (isMobileOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "unset";
+    }
+    return () => {
+      document.body.style.overflow = "unset";
+    };
+  }, [isMobileOpen]);
+
+  // Fetch plan name
   useEffect(() => {
     const fetchPlanName = async () => {
       if (!user?.planId) return;
@@ -19,7 +85,10 @@ const Sidebar = () => {
         setPlanLoading(true);
         const response = await api.get("/plans");
         if (response.data && response.data.length > 0) {
-          const plan = response.data.find((p) => p.planId === user.planId);
+          // Get the latest/highest plan
+          const planIds = user.planId || [1];
+          const highestPlanId = Math.max(...planIds);
+          const plan = response.data.find((p) => p.planId === highestPlanId);
           if (plan) {
             setPlanName(plan.name);
           } else {
@@ -37,36 +106,138 @@ const Sidebar = () => {
     fetchPlanName();
   }, [user?.planId]);
 
+  // ✅ Get user's plans array
+  const userPlans = user?.planId || [1];
+  const highestPlanId = Math.max(...userPlans);
+
+  // ✅ Helper: Check if user has purchased a specific plan
+  const hasPlan = (planId) => {
+    if (isAdmin) return true;
+    return userPlans.includes(planId);
+  };
+
+  // ✅ Helper: Check if user has ANY of these plans
+  const hasAnyPlan = (planIds) => {
+    if (isAdmin) return true;
+    return planIds.some((id) => userPlans.includes(id));
+  };
+
+  // ✅ Helper: Check if user has plan OR higher
+  const hasPlanOrHigher = (minPlanId) => {
+    if (isAdmin) return true;
+    return userPlans.some((id) => id >= minPlanId);
+  };
+
+  // ✅ NAVIGATION ITEMS - Based on purchased plans
   const navItems = [
-    { path: "/dashboard", label: "Dashboard", icon: "fa-chart-line" },
-    { path: "/insights", label: "Insights", icon: "fa-chart-pie" },
-    { path: "/zo/ai/chat", label: "ZO AI", icon: "fa-robot" },
-    { path: "/automation", label: "Automation", icon: "fa-clock" },
-    { path: "/add-website", label: "Add Website", icon: "fa-plus-circle" },
-    { path: "/reports", label: "Reports", icon: "fa-file-alt" },
-    { path: "/settings", label: "Settings", icon: "fa-cog" },
+    // ===== ✅ ALL PLANS - Always show =====
+    {
+      path: "/dashboard",
+      label: "Dashboard",
+      icon: LayoutDashboard,
+      show: true,
+    },
+    {
+      path: "/create",
+      label: "Create Product",
+      icon: Plus,
+      show: true,
+    },
+    {
+      path: "/products",
+      label: "My Products",
+      icon: Box,
+      show: true,
+    },
+    {
+      path: "/cover-design",
+      label: "Cover Design",
+      icon: Images,
+      show: hasAnyPlan([2]),
+    },
+    {
+      path: "/aiseals",
+      label: "AI Seals Machine",
+      icon: Sparkles,
+      show: hasAnyPlan([3]),
+    },
+
+    // ===== ✅ Show if user has purchased Plan 2+ =====
+    {
+      path: "/unlimited",
+      icon: Crown,
+      label: "Unlimited",
+      show: hasAnyPlan([4]),
+    },
+
+    // ===== ✅ Show if user has purchased Plan 3+ =====
+    {
+      path: "/competitor-analysis",
+      icon: ArrowRightLeft,
+      label: "Competitor Analysis",
+      show: hasAnyPlan([5]),
+    },
+
+    // ===== ✅ Show if user has purchased Plan 4+ =====
+    {
+      path: "/ai-ranker",
+      icon: ChartLine,
+      label: "AI Ranker",
+      show: hasAnyPlan([6]),
+    },
+
+    // ===== ✅ Show if user has purchased Plan 5+ =====
+    {
+      path: "/dfy-templates",
+      label: "DFY Templates",
+      icon: FolderOpen,
+      show: hasAnyPlan([7]),
+    },
+
+    // ===== ✅ Show ONLY if user has purchased Plan 10 =====
     {
       path: "/ai-profit-machine",
       label: "AI Profit Machine",
-      icon: "fa-money-bill-wave",
+      icon: DollarSign,
+      show: hasPlan(8),
     },
     {
-      path: "/visual-library",
-      label: "DFY Visual Library",
-      icon: "fa-images",
+      path: "/reseller",
+      label: "Reseller",
+      icon: Gift,
+      show: hasAnyPlan([7]),
+    },
+
+    // ===== ✅ ALL PLANS - Always show =====
+    {
+      path: "/training",
+      icon: GraduationCap,
+      label: "Training",
+      show: true,
+      target: "_blank",
     },
     {
-      path: "/video-library",
-      label: "DFY Video Library",
-      icon: "fa-video",
+      path: "/upgrades",
+      icon: Rocket,
+      label: "Upgrades",
+      show: true,
+      target: "_blank",
+      external: true,
+      href: "https://getcomplyzo.com/upgrades",
     },
-    { path: '/ai-ranker', icon: 'fa-chart-line', label: 'AI Ranker' },
+    {
+      path: "/support",
+      icon: Headset,
+      label: "Support",
+      show: true,
+      target: "_blank",
+    },
   ];
 
   const adminNavItem = {
     path: "/admin/dashboard",
     label: "Admin Panel",
-    icon: "fa-shield-alt",
+    icon: Shield,
   };
 
   const handleLogout = async () => {
@@ -74,17 +245,31 @@ const Sidebar = () => {
     navigate("/login");
   };
 
+  const toggleDropdown = () => {
+    setIsDropdownOpen(!isDropdownOpen);
+  };
+
+  const toggleMobileSidebar = () => {
+    setIsMobileOpen(!isMobileOpen);
+  };
+
+  const closeMobileSidebar = () => {
+    setIsMobileOpen(false);
+  };
+
   const getPlanColor = (planName) => {
     const planColors = {
       Free: "bg-gray-100 text-gray-600",
-      Starter: "bg-blue-100 text-blue-600",
-      Pro: "bg-purple-100 text-purple-600",
-      Growth: "bg-green-100 text-green-600",
-      Enterprise: "bg-amber-100 text-amber-600",
-      "Healtrics FE": "bg-blue-100 text-blue-600",
-      "Healtrics Pro": "bg-purple-100 text-purple-600",
-      "Healtrics Unlimited": "bg-amber-100 text-amber-600",
-      Healtric: "bg-blue-100 text-blue-600",
+      "Complyzo FE": "bg-blue-100 text-blue-600",
+      "Complyzo FE+TURBO": "bg-indigo-100 text-indigo-600",
+      "Complyzo Unlimited Silver": "bg-gray-200 text-gray-700",
+      "Complyzo Unlimited Gold": "bg-amber-100 text-amber-700",
+      "Complyzo Competitor Spy Elite": "bg-purple-100 text-purple-600",
+      "Complyzo Competitor Spy Pro": "bg-purple-200 text-purple-700",
+      "Complyzo AI Ranker": "bg-emerald-100 text-emerald-600",
+      "Complyzo DFY Silver": "bg-gray-300 text-gray-800",
+      "Complyzo DFY Gold": "bg-yellow-100 text-yellow-700",
+      "Complyzo AI Profit Machine": "bg-rose-100 text-rose-600",
     };
     return planColors[planName] || "bg-gray-100 text-gray-600";
   };
@@ -92,216 +277,354 @@ const Sidebar = () => {
   const getPlanIcon = (planName) => {
     const planIcons = {
       Free: "fa-box",
-      Starter: "fa-rocket",
-      Pro: "fa-crown",
-      Growth: "fa-chart-line",
-      Enterprise: "fa-building",
-      "Healtrics FE": "fa-box",
-      "Healtrics Pro": "fa-crown",
-      "Healtrics Unlimited": "fa-infinity",
-      Healtric: "fa-box",
+      "Complyzo FE": "fa-rocket",
+      "Complyzo FE+TURBO": "fa-bolt",
+      "Complyzo Unlimited Silver": "fa-infinity",
+      "Complyzo Unlimited Gold": "fa-crown",
+      "Complyzo Competitor Spy Elite": "fa-eye",
+      "Complyzo Competitor Spy Pro": "fa-eye",
+      "Complyzo AI Ranker": "fa-chart-line",
+      "Complyzo DFY Silver": "fa-wrench",
+      "Complyzo DFY Gold": "fa-wrench",
+      "Complyzo AI Profit Machine": "fa-money-bill-wave",
     };
     return planIcons[planName] || "fa-box";
   };
 
-  // ✅ Helper function to get styles based on active state
-  const getNavLinkClass = (isActive) => {
-    return `group relative flex items-center px-4 py-2.5 rounded-xl transition-all duration-200 ${
-      isActive 
-        ? "bg-gradient-to-r from-blue-50 to-indigo-50/50 text-indigo-600 shadow-sm" 
-        : "text-gray-600 hover:bg-gray-50/80 hover:text-indigo-500"
-    }`;
+  const visibleNavItems = navItems.filter((item) => item.show);
+
+  const isExternalLink = (item) => {
+    return item.external === true;
   };
 
-  const getIconClass = (isActive) => {
-    return `w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-200 ${
-      isActive 
-        ? "bg-gradient-to-br from-indigo-100 to-blue-100 text-indigo-600" 
-        : "bg-gray-100/80 text-gray-400 group-hover:bg-indigo-50/50 group-hover:text-indigo-500"
-    }`;
-  };
-
-  const getAdminNavLinkClass = (isActive) => {
-    return `group relative flex items-center px-4 py-2.5 rounded-xl transition-all duration-200 ${
-      isActive 
-        ? "bg-gradient-to-r from-red-50 to-red-100/50 text-red-600 shadow-sm" 
-        : "text-gray-600 hover:bg-red-50/50 hover:text-red-500"
-    }`;
-  };
-
-  const getAdminIconClass = (isActive) => {
-    return `w-8 h-8 rounded-lg flex items-center justify-center transition-all duration-200 ${
-      isActive 
-        ? "bg-red-100 text-red-600" 
-        : "bg-gray-100/80 text-gray-400 group-hover:bg-red-100/50 group-hover:text-red-500"
-    }`;
+  // ✅ Get display name based on highest plan ID
+  const getPlanDisplayName = (planId) => {
+    const planMap = {
+      1: "Free",
+      2: "FE",
+      3: "FE+TURBO",
+      4: "Unlimited Silver",
+      5: "Unlimited Gold",
+      10: "AI Profit Machine",
+    };
+    return planMap[planId] || planName || "Free";
   };
 
   return (
     <>
-      {/* Desktop Sidebar - Enhanced UI */}
-      <aside className="hidden md:flex md:flex-col md:w-72 bg-white shadow-2xl h-screen fixed left-0 top-0 border-r border-gray-100/80">
-        
-        {/* Logo Section - Premium */}
-        <div className="p-5 border-b border-gray-100/80 flex justify-center">
-          <Link to="/" className="inline-block group w-[13rem]">
-            <img src={logo} alt="" srcset="complyzo by albinolabs" />
-          </Link>
-          {user?.role === "admin" && (
-            <span className="mt-2 inline-flex items-center gap-1.5 text-[10px] font-medium text-red-600 bg-red-50 border border-red-200 px-2.5 py-0.5 rounded-full">
-              <span className="w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse"></span>
-              Admin
-            </span>
-          )}
+      {/* ✅ Mobile Hamburger Button */}
+      <button
+        onClick={toggleMobileSidebar}
+        className="fixed top-4 left-4 z-50 md:hidden p-2 rounded-xl bg-white shadow-lg border border-gray-100 hover:shadow-xl transition-all duration-200"
+        aria-label="Toggle menu"
+      >
+        {isMobileOpen ? (
+          <X size={22} className="text-[#111827]" />
+        ) : (
+          <Menu size={22} className="text-[#111827]" />
+        )}
+      </button>
+
+      {/* ✅ Mobile Overlay */}
+      {isMobileOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm md:hidden animate-fade-in"
+          onClick={closeMobileSidebar}
+        />
+      )}
+
+      {/* ✅ Desktop Sidebar - Fixed */}
+      <aside
+        ref={sidebarRef}
+        className={`
+          hidden md:flex md:flex-col md:w-72 bg-white shadow-2xl h-screen fixed left-0 top-0 border-r border-gray-100/80
+          ${isMobileOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}
+          shadow-xl md:shadow-none
+        `}
+      >
+        {/* Logo Section */}
+        <div className="flex h-[72px] md:h-[96px] items-center justify-between border-b border-[#e7e9ed] px-4 md:px-7">
+          <img
+            src={logo}
+            alt="AI Digital Product Factory"
+            className="h-[50px] md:h-[75px] w-auto object-contain"
+          />
+
+          {/* Mobile Close Button inside sidebar */}
+          <button
+            onClick={closeMobileSidebar}
+            className="md:hidden p-1.5 rounded-lg hover:bg-gray-100 transition"
+            aria-label="Close menu"
+          >
+            <X size={20} className="text-[#6B7280]" />
+          </button>
         </div>
 
-        {/* Navigation Links - Premium */}
-        <nav className="flex-1 mt-3 px-3 overflow-y-auto">
+        {/* Navigation */}
+        <nav className="flex-1 overflow-y-auto px-3 md:px-5 pt-3 md:pt-4 pb-4">
           {/* Admin Panel Link */}
           {user?.role === "admin" && (
-            <div className="mb-3">
-              <div className="px-3 py-1.5">
-                <span className="text-[9px] font-semibold text-gray-400 uppercase tracking-widest flex items-center gap-2">
-                  <span className="w-4 h-px bg-gray-300"></span>
-                  Administration
-                  <span className="w-4 h-px bg-gray-300"></span>
-                </span>
-              </div>
+            <>
               <NavLink
                 to={adminNavItem.path}
-                className={({ isActive }) => getAdminNavLinkClass(isActive)}
+                className={({ isActive }) =>
+                  `flex h-[44px] md:h-[48px] w-full items-center rounded-[8px] px-2.5 text-left transition-all duration-200 ${
+                    isActive
+                      ? "bg-[#fff1c9] text-[#15191e]"
+                      : "text-[#252b33] hover:bg-[#f7f8fa]"
+                  }`
+                }
               >
-                {({ isActive }) => (
-                  <>
-                    <div className={getAdminIconClass(isActive)}>
-                      <i className={`fas ${adminNavItem.icon} text-sm`}></i>
-                    </div>
-                    <span className="ml-3 text-base font-medium">{adminNavItem.label}</span>
-                    {isActive && (
-                      <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-gradient-to-b from-red-500 to-red-600 rounded-r-full"></span>
-                    )}
-                  </>
-                )}
+                <Shield
+                  size={20}
+                  strokeWidth={1.8}
+                  className="mr-3 md:mr-4 shrink-0 transition-colors duration-200"
+                />
+                <span className="text-[13px] md:text-[14px] font-medium">
+                  {adminNavItem.label}
+                </span>
               </NavLink>
-            </div>
+            </>
           )}
 
-          {/* Divider */}
-          {user?.role === "admin" && (
-            <div className="relative my-3">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-200/60"></div>
-              </div>
-            </div>
-          )}
+          {/* Main Navigation */}
+          <div className="space-y-0.5">
+            {visibleNavItems.map((item) => {
+              const Icon = item.icon;
 
-          {/* Main Navigation - Enhanced */}
-          <div className="space-y-1">
-            {navItems.map((item) => (
-              <NavLink
-                key={item.path}
-                to={item.path}
-                className={({ isActive }) => getNavLinkClass(isActive)}
-              >
-                {({ isActive }) => (
-                  <>
-                    <div className={getIconClass(isActive)}>
-                      <i className={`fas ${item.icon} text-sm`}></i>
-                    </div>
-                    <span className="ml-3 text-base font-medium">{item.label}</span>
-                    {isActive && (
-                      <span className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-gradient-to-b from-indigo-500 to-blue-500 rounded-r-full"></span>
-                    )}
-                    {item.badge && (
-                      <span className={`ml-auto text-[8px] font-bold text-white px-2 py-0.5 rounded-full ${item.badgeColor}`}>
-                        {item.badge}
-                      </span>
-                    )}
-                  </>
-                )}
-              </NavLink>
-            ))}
+              if (isExternalLink(item)) {
+                return (
+                  <a
+                    key={item.path}
+                    href={item.href}
+                    target={item.target || "_blank"}
+                    rel="noopener noreferrer"
+                    className="flex h-[44px] md:h-[48px] w-full items-center rounded-[8px] px-2.5 text-left transition text-[#252b33] hover:bg-[#f7f8fa]"
+                  >
+                    <Icon
+                      size={20}
+                      strokeWidth={1.8}
+                      className="mr-3 md:mr-4 shrink-0"
+                    />
+                    <span className="text-[13px] md:text-[14px] font-medium">
+                      {item.label}
+                    </span>
+                  </a>
+                );
+              }
+
+              return (
+                <NavLink
+                  key={item.path}
+                  to={item.path}
+                  onClick={closeMobileSidebar}
+                  className={({ isActive }) =>
+                    `flex h-[44px] md:h-[48px] w-full items-center rounded-[8px] px-2.5 text-left transition ${
+                      isActive
+                        ? "bg-[#fff1c9] text-[#15191e]"
+                        : "text-[#252b33] hover:bg-[#f7f8fa]"
+                    }`
+                  }
+                >
+                  <Icon
+                    size={20}
+                    strokeWidth={1.8}
+                    className="mr-3 md:mr-4 shrink-0"
+                  />
+                  <span className="text-[13px] md:text-[14px] font-medium">
+                    {item.label}
+                  </span>
+                </NavLink>
+              );
+            })}
           </div>
         </nav>
 
-        {/* User Info - Premium Footer */}
-        <div className="p-4 mt-auto border-t border-gray-100/80 bg-gradient-to-b from-white to-gray-50/50">
-          {user && (
-            <div className="relative mb-3 p-3 bg-white rounded-xl shadow-sm border border-gray-100/80">
-              {/* Decorative accent */}
-              <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-indigo-500/5 to-purple-500/5 rounded-full blur-xl"></div>
-              
-              <div className="relative flex items-center gap-3">
-                <div className="relative flex-shrink-0">
-                  <div className="w-10 h-10 bg-gradient-to-br from-gray-700 to-gray-900 rounded-xl flex items-center justify-center shadow-md">
-                    <span className="text-white text-sm font-bold">
-                      {user?.name?.charAt(0)?.toUpperCase() || "U"}
-                    </span>
-                  </div>
-                  <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-green-400 border-2 border-white rounded-full"></span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold text-gray-800 truncate">
-                    {user?.name || "User"}
-                  </p>
-                  <p className="text-[11px] text-gray-400 truncate">
-                    {user?.email || "No email"}
-                  </p>
+        {/* User Info */}
+        <div className="px-3 md:px-5 pb-4 md:pb-5 border-t border-[#e7e9ed]">
+          {/* User Profile */}
+          <div
+            className="relative mt-4 md:mt-6 flex items-center px-1 py-1.5 rounded-xl cursor-pointer hover:bg-gray-50/50 transition-all duration-200 shadow-sm hover:shadow-md"
+            onClick={toggleDropdown}
+          >
+            <div className="relative">
+              <div className="h-9 w-9 md:h-10 md:w-10 overflow-hidden rounded-full bg-gradient-to-br from-[#FACC15]/20 to-[#F59E0B]/10 shadow-md ring-2 ring-[#FACC15]/30">
+                <div className="flex h-full items-center justify-center text-[16px] md:text-[18px] font-bold text-[#111827]">
+                  {user?.name?.charAt(0)?.toUpperCase() || "U"}
                 </div>
               </div>
-
-              {/* Plan Badge */}
-              <div className="relative mt-3 flex items-center gap-2">
+              <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 md:w-3.5 md:h-3.5 bg-green-400 border-2 border-white rounded-full shadow-md"></span>
+            </div>
+            <div className="ml-2.5 md:ml-3 flex-1 min-w-0">
+              <div className="text-[12px] md:text-[13px] font-semibold text-[#11151a] truncate">
+                {user?.name || "User"}
+              </div>
+              <div className="mt-1 flex items-center gap-1">
                 {planLoading ? (
-                  <span className="text-[10px] text-gray-400">Loading plan...</span>
-                ) : (
-                  <span className={`inline-flex items-center gap-1.5 text-[10px] font-medium px-2.5 py-1 rounded-full ${getPlanColor(planName)}`}>
-                    <i className={`fas ${getPlanIcon(planName)} text-[8px]`}></i>
-                    {planName}
+                  <span className="text-[9px] md:text-[10px] text-gray-400">
+                    Loading plan...
                   </span>
-                )}
-                {user?.role === "admin" && (
-                  <span className="inline-flex items-center gap-1 text-[10px] font-medium text-red-600 bg-red-50 px-2.5 py-1 rounded-full">
-                    <span className="w-1 h-1 bg-red-500 rounded-full"></span>
-                    Admin
+                ) : (
+                  <span
+                    className={`inline-flex items-center gap-1.5 text-[9px] md:text-[10px] font-medium px-2 md:px-2.5 py-0.5 md:py-1 rounded-full ${getPlanColor(planName)} shadow-sm truncate max-w-[120px] md:max-w-none`}
+                  >
+                    <i
+                      className={`fas ${getPlanIcon(planName)} text-[7px] md:text-[8px] flex-shrink-0`}
+                    ></i>
+                    <span className="truncate">
+                      {planName?.replace(/^Complyzo\s+/, "") ||
+                        planName ||
+                        "Free"}
+                    </span>
                   </span>
                 )}
               </div>
             </div>
-          )}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleDropdown();
+              }}
+              className="ml-auto p-1 md:p-1.5 rounded-lg hover:bg-gray-100/70 transition-all duration-200 flex-shrink-0"
+            >
+              <ChevronDown
+                size={15}
+                className={`text-[#161a20] transition-transform duration-200 ${isDropdownOpen ? "rotate-180" : ""}`}
+              />
+            </button>
+          </div>
 
-          {/* Logout Button - Premium */}
-          <button
-            onClick={handleLogout}
-            className="group relative w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-gray-600 bg-white border border-gray-200/80 rounded-xl hover:bg-red-50 hover:text-red-600 hover:border-red-200 transition-all duration-300 shadow-sm hover:shadow-md"
-          >
-            <i className="fas fa-sign-out-alt text-sm transition-transform duration-300 group-hover:rotate-12"></i>
-            <span>Logout</span>
-          </button>
+          {/* Dropdown Menu */}
+          {isDropdownOpen && (
+            <div
+              ref={dropdownRef}
+              className="absolute bottom-[160px] md:bottom-[180px] left-3 md:left-5 right-3 md:right-5 bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden animate-slide-up z-50"
+            >
+              <div className="p-1.5 md:p-2">
+                <NavLink
+                  to="/settings"
+                  onClick={() => {
+                    setIsDropdownOpen(false);
+                    closeMobileSidebar();
+                  }}
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600 hover:bg-[#FACC15]/10 hover:text-[#111827] transition-all duration-200"
+                >
+                  <Settings size={18} className="text-[#6B7280]" />
+                  <span className="font-medium">Settings</span>
+                </NavLink>
+
+                <NavLink
+                  to="/subscription"
+                  onClick={() => {
+                    setIsDropdownOpen(false);
+                    closeMobileSidebar();
+                  }}
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600 hover:bg-[#FACC15]/10 hover:text-[#111827] transition-all duration-200"
+                >
+                  <Crown size={18} className="text-[#6B7280]" />
+                  <span className="font-medium">Subscription</span>
+                </NavLink>
+
+                <NavLink
+                  to="/support"
+                  onClick={() => {
+                    setIsDropdownOpen(false);
+                    closeMobileSidebar();
+                  }}
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-600 hover:bg-[#FACC15]/10 hover:text-[#111827] transition-all duration-200"
+                >
+                  <Headset size={18} className="text-[#6B7280]" />
+                  <span className="font-medium">Support</span>
+                </NavLink>
+
+                <div className="h-px bg-gray-100 my-1"></div>
+
+                <button
+                  onClick={() => {
+                    handleLogout();
+                    closeMobileSidebar();
+                  }}
+                  className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm text-red-600 hover:bg-red-50 transition-all duration-200"
+                >
+                  <LogOut size={18} />
+                  <span className="font-medium">Logout</span>
+                  <span className="ml-auto text-[10px] text-red-400">→</span>
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </aside>
 
-      {/* Mobile Bottom Navigation - Enhanced */}
-      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-lg border-t border-gray-200/80 shadow-lg z-50">
-        <div className="flex justify-around items-center py-2 px-2">
-          {navItems.slice(0, 5).map((item) => (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              className={({ isActive }) =>
-                `flex flex-col items-center py-1.5 px-3 rounded-xl transition-all duration-200 ${
-                  isActive 
-                    ? "text-indigo-600 bg-indigo-50/80" 
-                    : "text-gray-400 hover:text-gray-600"
-                }`
-              }
-            >
-              <i className={`fas ${item.icon} text-lg`}></i>
-              <span className="text-[9px] font-medium mt-0.5">{item.label.split(" ")[0]}</span>
-            </NavLink>
-          ))}
+      {/* ✅ Mobile Bottom Navigation */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-lg border-t border-gray-200/80 shadow-lg z-30">
+        <div className="flex justify-around items-center py-1.5 px-2">
+          {visibleNavItems.slice(0, 5).map((item) => {
+            const Icon = item.icon;
+            if (isExternalLink(item)) {
+              return (
+                <a
+                  key={item.path}
+                  href={item.href}
+                  target={item.target || "_blank"}
+                  rel="noopener noreferrer"
+                  className="flex flex-col items-center py-1.5 px-2 rounded-xl transition-all duration-200 text-gray-400 hover:text-[#FACC15] active:scale-95 min-w-[50px]"
+                >
+                  <Icon size={20} strokeWidth={1.8} />
+                  <span className="text-[8px] font-medium mt-0.5 truncate max-w-[50px]">
+                    {item.label.split(" ")[0]}
+                  </span>
+                </a>
+              );
+            }
+            return (
+              <NavLink
+                key={item.path}
+                to={item.path}
+                className={({ isActive }) =>
+                  `flex flex-col items-center py-1.5 px-2 rounded-xl transition-all duration-200 active:scale-95 min-w-[50px] ${
+                    isActive
+                      ? "text-[#FACC15] bg-[#FACC15]/10"
+                      : "text-gray-400 hover:text-[#FACC15]"
+                  }`
+                }
+              >
+                <Icon size={20} strokeWidth={1.8} />
+                <span className="text-[8px] font-medium mt-0.5 truncate max-w-[50px]">
+                  {item.label.split(" ")[0]}
+                </span>
+              </NavLink>
+            );
+          })}
         </div>
       </nav>
+
+      <style>{`
+        @keyframes slide-up {
+          from {
+            opacity: 0;
+            transform: translateY(10px) scale(0.95);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+        .animate-slide-up {
+          animation: slide-up 0.2s ease-out forwards;
+        }
+        @keyframes fade-in {
+          from {
+            opacity: 0;
+          }
+          to {
+            opacity: 1;
+          }
+        }
+        .animate-fade-in {
+          animation: fade-in 0.25s ease-out forwards;
+        }
+      `}</style>
     </>
   );
 };

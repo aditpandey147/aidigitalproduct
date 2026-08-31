@@ -293,7 +293,7 @@ router.put('/chat/:chatId/title', auth, async (req, res) => {
   }
 });
 
-// Delete chat
+/// Delete chat - PERMANENT DELETE
 router.delete('/chat/:chatId', auth, async (req, res) => {
   try {
     const { chatId } = req.params;
@@ -310,12 +310,12 @@ router.delete('/chat/:chatId', auth, async (req, res) => {
       });
     }
 
-    chat.isActive = false;
-    await chat.save();
+    // ✅ PERMANENT DELETE - Remove from database completely
+    await AIChat.findByIdAndDelete(chatId);
 
     res.json({
       success: true,
-      message: 'Chat deleted successfully'
+      message: 'Chat deleted permanently'
     });
 
   } catch (error) {

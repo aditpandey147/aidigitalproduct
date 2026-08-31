@@ -56,7 +56,7 @@ const paymentSchema = new mongoose.Schema({
   },
   platform: {
     type: String,
-    enum: ['jvzoo', 'launchpad'],
+    enum: ['jvzoo', 'launchpad', 'Admin'],
     default: 'jvzoo'
   },
   ipnData: {

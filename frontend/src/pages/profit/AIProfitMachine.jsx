@@ -34,12 +34,10 @@ const AIProfitMachine = () => {
   const fetchAgents = async () => {
     setLoading(true);
     try {
-      console.log('📡 Fetching agents...');
       const response = await api.get('/ai-profit/agents');
       
       if (response.data?.success) {
         setAgents(response.data.agents);
-        console.log(`✅ Loaded ${response.data.agents.length} agents`);
       } else {
         toast.error('Failed to load agents');
       }
@@ -59,7 +57,6 @@ const AIProfitMachine = () => {
     }
 
     try {
-      console.log('🚀 Opening chat with:', agent.name);
       
       const response = await api.post('/ai-profit/chat/new', { 
         agentSlug: agent.slug 
@@ -67,7 +64,6 @@ const AIProfitMachine = () => {
       
       if (response.data?.success && response.data?.chat?.id) {
         const chatId = response.data.chat.id;
-        console.log('✅ Chat created:', chatId);
         navigate(`/ai-profit-machine/chat/${chatId}`);
       } else {
         toast.error('Failed to create chat');
@@ -99,7 +95,7 @@ const AIProfitMachine = () => {
           <div className="text-center">
             <div className="relative w-12 h-12 mx-auto mb-4">
               <div className="absolute inset-0 border-4 border-gray-200 rounded-full"></div>
-              <div className="absolute inset-0 border-4 border-t-blue-600 rounded-full animate-spin"></div>
+              <div className="absolute inset-0 border-4 border-t-[#FACC15] rounded-full animate-spin"></div>
             </div>
             <p className="text-sm text-gray-500">Loading AI agents...</p>
           </div>
@@ -119,8 +115,8 @@ const AIProfitMachine = () => {
           {/* Header */}
           <div className="mb-6">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-sm">
-                <i className="fas fa-robot text-white text-lg"></i>
+              <div className="w-10 h-10 bg-gradient-to-r from-[#FACC15] to-[#F59E0B] rounded-xl flex items-center justify-center shadow-sm">
+                <i className="fas fa-robot text-[#111827] text-lg"></i>
               </div>
               <div>
                 <h1 className="text-xl font-bold text-gray-900">AI Profit Agents</h1>
@@ -139,7 +135,7 @@ const AIProfitMachine = () => {
                 placeholder="Search agents..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent shadow-sm"
+                className="w-full pl-10 pr-4 py-2.5 bg-white border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-[#FACC15] focus:border-transparent shadow-sm"
               />
               <i className="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 text-sm"></i>
             </div>
@@ -151,7 +147,7 @@ const AIProfitMachine = () => {
                   onClick={() => setSelectedCategory(cat.id)}
                   className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-all ${
                     selectedCategory === cat.id
-                      ? 'bg-blue-600 text-white shadow-sm'
+                      ? 'bg-[#FACC15] text-[#111827] shadow-sm'
                       : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
                   }`}
                 >
@@ -168,7 +164,7 @@ const AIProfitMachine = () => {
               <p className="text-gray-500 text-sm">No agents found</p>
               <button 
                 onClick={() => { setSearchTerm(''); setSelectedCategory('all'); }}
-                className="text-sm text-blue-600 hover:underline mt-2"
+                className="text-sm text-[#FACC15] hover:underline mt-2"
               >
                 Clear filters
               </button>
@@ -195,22 +191,22 @@ const AgentCard = ({ agent, onClick }) => {
   return (
     <div
       onClick={() => onClick(agent)}
-      className="group bg-white rounded-xl border border-gray-200 transition-all duration-300 cursor-pointer hover:shadow-lg hover:-translate-y-1 hover:border-blue-300"
+      className="group bg-white rounded-xl border border-gray-200 transition-all duration-300 cursor-pointer hover:shadow-lg hover:-translate-y-1 hover:border-[#FACC15]"
     >
       <div className="p-5">
         {/* Icon */}
         <div 
           className="w-12 h-12 rounded-xl flex items-center justify-center mb-3 transition-transform group-hover:scale-110"
-          style={{ backgroundColor: agent.color + '20' }}
+          style={{ backgroundColor: '#FACC15' + '20' }}
         >
           <i 
             className={`fas ${agent.icon} text-xl`}
-            style={{ color: agent.color }}
+            style={{ color: '#FACC15' }}
           ></i>
         </div>
 
         {/* Content */}
-        <h3 className="text-base font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">
+        <h3 className="text-base font-semibold text-gray-900 group-hover:text-[#F59E0B] transition-colors">
           {agent.name}
         </h3>
         <p className="text-xs text-gray-500 mt-0.5">{agent.role}</p>
@@ -222,12 +218,12 @@ const AgentCard = ({ agent, onClick }) => {
         {/* Footer */}
         <div className="flex items-center justify-between pt-3 mt-3 border-t border-gray-100">
           <span className="text-xs text-gray-400">
-            <i className="fas fa-robot text-[10px] text-blue-400 mr-1"></i>
+            <i className="fas fa-robot text-[10px] text-[#FACC15] mr-1"></i>
             {agent.usageCount || 0} chats
           </span>
           
           <button 
-            className="text-xs font-medium text-blue-600 group-hover:text-blue-700 transition flex items-center gap-1"
+            className="text-xs font-medium text-[#FACC15] group-hover:text-[#F59E0B] transition flex items-center gap-1"
             onClick={(e) => {
               e.stopPropagation();
               onClick(agent);

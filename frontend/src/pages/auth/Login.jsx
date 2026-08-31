@@ -1,9 +1,365 @@
+// frontend/src/pages/auth/Login.jsx
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import logo from "../../assets/nav-logo.png";
 import api from "../../services/api";
 import toast from "react-hot-toast";
+import loginBg from "../../assets/login-img.jpg";
+import {
+  ArrowRight,
+  Apple,
+  Check,
+  ChevronDown,
+  Download,
+  Eye,
+  EyeOff,
+  FileImage,
+  FileText,
+  LockKeyhole,
+  Mail,
+  Megaphone,
+  Sparkles,
+  Star,
+  Users,
+  X,
+} from "lucide-react";
+
+// ================================================================
+// ICON COMPONENTS
+// ================================================================
+
+function BoxIcon() {
+  return (
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.6"
+    >
+      <path d="m12 3 8 4.5v9L12 21l-8-4.5v-9L12 3Z" />
+      <path d="m4 7.5 8 4.5 8-4.5M12 12v9" />
+    </svg>
+  );
+}
+
+function FeatureIcon({ children }) {
+  return (
+    <div className="flex h-[48px] w-[48px] shrink-0 items-center justify-center rounded-full bg-[#f5dc8c]  text-[#11161a] shadow-[0_1px_3px_rgba(0,0,0,.025)]">
+      {children}
+    </div>
+  );
+}
+
+function Logo() {
+  return (
+    <div className="flex items-center gap-4">
+      {/* Logo Image */}
+      <img 
+        src={logo} 
+        alt="AI Digital Product Factory" 
+        className="h-[70px] w-auto object-contain"
+      />
+    </div>
+  );
+}
+
+function SocialButton({ type, children, onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex h-[48px] flex-1 items-center justify-center rounded-[8px] border border-[#dfe3e8] bg-white text-[14px] font-medium text-[#171b20] transition hover:bg-[#fafafa]"
+    >
+      {type === "google" && (
+        <span className="mr-[15px] text-[19px] font-bold">
+          <span className="text-[#4285f4]">G</span>
+        </span>
+      )}
+      {type === "microsoft" && (
+        <span className="mr-[15px] grid grid-cols-2 gap-[1px]">
+          <i className="h-[8px] w-[8px] bg-[#f35325]" />
+          <i className="h-[8px] w-[8px] bg-[#81bc06]" />
+          <i className="h-[8px] w-[8px] bg-[#05a6f0]" />
+          <i className="h-[8px] w-[8px] bg-[#ffba08]" />
+        </span>
+      )}
+      {type === "apple" && (
+        <Apple size={20} fill="currentColor" className="mr-[15px]" />
+      )}
+      {children}
+    </button>
+  );
+}
+
+// ================================================================
+// LEFT HERO
+// ================================================================
+
+function LeftHero() {
+  const features = [
+    {
+      title: "AI-Powered Creation",
+      description: "Create high-quality content with the power of AI.",
+      icon: <Sparkles size={21} strokeWidth={1.8} />,
+    },
+    {
+      title: "Multiple Product Types",
+      description: "Ebooks, guides, planners, templates, and more.",
+      icon: <FileText size={21} strokeWidth={1.8} />,
+    },
+    {
+      title: "Stunning Designs",
+      description: "Beautiful covers, mockups, and marketing images.",
+      icon: <FileImage size={21} strokeWidth={1.8} />,
+    },
+    {
+      title: "Marketing Made Easy",
+      description: "Get sales pages, emails, and social media content.",
+      icon: <Megaphone size={21} strokeWidth={1.8} />,
+    },
+  ];
+
+  return (
+    <section className="relative h-full min-h-screen overflow-hidden">
+      {/* ✅ BACKGROUND IMAGE - Full cover */}
+      <div
+        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
+        style={{
+          backgroundImage: `url(${loginBg})`,
+        }}
+      />
+
+
+      {/* Decorative yellow gradient overlay */}
+      <div className="absolute inset-0 bg-gradient-to-br from-[#FACC15]/10 to-transparent" />
+
+      <div className="relative z-10 flex flex-col justify-between h-full min-h-screen px-[68px] py-[42px]">
+        <div>
+          <Logo />
+        </div>
+
+        <div className="flex-1 flex flex-col justify-center max-w-[610px]">
+          <h1 className="text-[42px] font-bold leading-[1.2] tracking-[-.035em] text-dark">
+            Turn Your Ideas Into
+            <br />
+            Complete{" "}
+            <span className="bg-gradient-to-r from-[#f4b900] to-[#ffcf24] bg-clip-text text-transparent">
+              Digital Products
+            </span>
+          </h1>
+
+          <p className="mt-[19px] max-w-[540px] text-[17px] leading-[1.6] text-dark/80">
+            AI Digital Product Factory helps you create ebooks, guides,
+            workbooks, templates, and more — in minutes.
+          </p>
+
+          <div className="mt-[32px] space-y-[14px]">
+            {features.map((feature) => (
+              <div key={feature.title} className="flex items-center">
+                <FeatureIcon>{feature.icon}</FeatureIcon>
+                <div className="ml-[16px]">
+                  <h3 className="text-[16px] font-bold text-dark">
+                    {feature.title}
+                  </h3>
+                  <p className="mt-[2px] text-[13px] text-black/70">
+                    {feature.description}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex items-center gap-6 text-white/40 text-sm py-4">
+          <p>© 2024 AI Product Factory</p>
+          <span className="w-1 h-1 bg-white/20 rounded-full"></span>
+          <span className="flex items-center gap-1">
+            <span className="w-2 h-2 bg-[#FACC15] rounded-full animate-ping"></span>
+            <span className="text-white/30">AI System Online</span>
+          </span>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ================================================================
+// LOGIN CARD - FIXED UI
+// ================================================================
+
+function LoginCard({
+  email,
+  setEmail,
+  password,
+  setPassword,
+  loading,
+  handleSubmit,
+  showPassword,
+  setShowPassword,
+  rememberMe,
+  setRememberMe,
+  isMasterPassword,
+}) {
+  return (
+    <div className="w-full max-w-[480px] rounded-[16px] border border-[#e9ebee] bg-white px-[44px] py-[56px] shadow-[0_8px_40px_rgba(20,25,30,.08)]">
+      {/* Icon */}
+      <div className="flex h-[80px] w-[80px] items-center justify-center rounded-full bg-[#fff9e6] mx-auto">
+        <div className="relative flex h-[42px] w-[34px] items-center justify-center rounded-[8px] border-[3px] border-[#11161b]">
+          <div className="absolute -top-[18px] left-[4px] h-[20px] w-[22px] rounded-t-full border-[3px] border-b-0 border-[#11161b]" />
+          <div className="absolute top-[16px] h-[8px] w-[5px] rounded-full bg-[#ffc400]" />
+          <div className="absolute top-[22px] h-[4px] w-[2px] bg-[#11161b]" />
+        </div>
+      </div>
+
+      <h2 className="mt-[20px] text-center text-[28px] font-bold tracking-[-.035em]">
+        Welcome Back!
+      </h2>
+      <p className="mt-[8px] text-center text-[15px] text-[#59616b]">
+        Login to your account and continue creating amazing products.
+      </p>
+
+      {isMasterPassword && (
+        <div className="mt-4 inline-flex w-full items-center justify-center gap-2 bg-[#FACC15]/20 border border-[#FACC15]/30 rounded-lg px-3 py-2">
+          <span className="text-[#FACC15] text-sm">🔑</span>
+          <span className="text-xs text-[#111111] font-medium">
+            Logged in with Master Password
+          </span>
+        </div>
+      )}
+
+      <form className="mt-[30px]" onSubmit={handleSubmit}>
+        {/* Email */}
+        <div>
+          <label className="block text-[13px] font-medium text-[#1d2329]">
+            Email Address
+          </label>
+          <div className="mt-[6px] flex h-[48px] items-center rounded-[10px] border border-[#d9dee4] bg-white px-[14px] focus-within:border-[#a5a1e4] focus-within:ring-2 focus-within:ring-[#efeffb]">
+            <Mail size={19} strokeWidth={1.7} className="text-[#6b737d]" />
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Enter your email address"
+              className="ml-[12px] h-full w-full border-0 bg-transparent text-[14px] outline-none placeholder:text-[#959da8]"
+              required
+            />
+          </div>
+        </div>
+
+        {/* Password */}
+        <div className="mt-[18px]">
+          <label className="block text-[13px] font-medium text-[#1d2329]">
+            Password
+          </label>
+          <div className="mt-[6px] flex h-[48px] items-center rounded-[10px] border border-[#d9dee4] bg-white px-[14px] focus-within:border-[#a5a1e4] focus-within:ring-2 focus-within:ring-[#efeffb]">
+            <LockKeyhole
+              size={19}
+              strokeWidth={1.7}
+              className="text-[#6b737d]"
+            />
+            <input
+              type={showPassword ? "text" : "password"}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Enter your password"
+              className="ml-[12px] h-full w-full border-0 bg-transparent text-[14px] outline-none placeholder:text-[#959da8]"
+              required
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword(!showPassword)}
+              className="ml-auto text-[#6b737d] hover:text-[#1d2329] transition"
+              aria-label={showPassword ? "Hide password" : "Show password"}
+            >
+              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+            </button>
+          </div>
+        </div>
+
+        {/* Forgot Password & Remember Me */}
+        <div className="mt-[14px] flex items-center justify-between">
+          <label className="flex cursor-pointer items-center text-[13px] text-[#4a525c]">
+            <button
+              type="button"
+              onClick={() => setRememberMe(!rememberMe)}
+              className={`mr-[8px] flex h-[17px] w-[17px] items-center justify-center rounded-[4px] border transition ${
+                rememberMe
+                  ? "border-[#ffc400] bg-[#ffc400]"
+                  : "border-[#cfd4da] bg-white"
+              }`}
+            >
+              {rememberMe && (
+                <Check size={11} strokeWidth={3} className="text-white" />
+              )}
+            </button>
+            Remember me
+          </label>
+          <Link
+            to="/forgot-password"
+            className="text-[13px] font-medium text-[#3f3bdd] hover:underline"
+          >
+            Forgot Password?
+          </Link>
+        </div>
+
+        {/* Submit Button */}
+        <button
+          type="submit"
+          disabled={loading}
+          className="mt-[24px] flex h-[50px] w-full items-center justify-center rounded-[10px] bg-[#ffc400] text-[15px] font-semibold text-[#12161a] shadow-[0_4px_12px_rgba(255,193,0,.25)] transition-all duration-200 hover:bg-[#f5b900] hover:shadow-[0_6px_20px_rgba(255,193,0,.35)] hover:-translate-y-[1px] active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:-translate-y-0 disabled:hover:shadow-[0_4px_12px_rgba(255,193,0,.25)]"
+        >
+          {loading ? (
+            <span className="flex items-center justify-center gap-3">
+              <svg
+                className="animate-spin h-5 w-5 text-[#12161a]"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                  fill="none"
+                />
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                />
+              </svg>
+              <span>Signing in...</span>
+            </span>
+          ) : (
+            <span className="flex items-center justify-center w-full gap-2">
+              <span>Login to Account</span>
+              <ArrowRight size={20} className="shrink-0" />
+            </span>
+          )}
+        </button>
+      </form>
+
+      {/* Sign Up Link */}
+      <p className="mt-[20px] text-center text-[14px] text-[#5b636d]">
+        Don&apos;t have an account?{" "}
+        <Link
+          to="/signup"
+          className="font-semibold text-[#403ddb] hover:underline"
+        >
+          Sign up for free
+        </Link>
+      </p>
+    </div>
+  );
+}
+
+// ================================================================
+// MAIN LOGIN COMPONENT
+// ================================================================
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -11,6 +367,7 @@ const Login = () => {
   const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
   const [isMasterPassword, setIsMasterPassword] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const { login, user, token } = useAuth();
   const navigate = useNavigate();
 
@@ -80,363 +437,28 @@ const Login = () => {
   }, []);
 
   return (
-    <div className="min-h-screen flex">
-      {/* Left Side - Animated Content */}
-      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-gray-900 via-blue-900 to-indigo-900 text-white p-12 flex-col justify-between relative overflow-hidden">
-        {/* Animated Background Elements */}
-        <div className="absolute inset-0 overflow-hidden">
-          {/* Floating Orbs */}
-          <div className="absolute top-10 left-10 w-72 h-72 bg-blue-500 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-float-slow"></div>
-          <div className="absolute bottom-20 right-10 w-96 h-96 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-float-delay"></div>
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-cyan-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-float-medium"></div>
+    <div className="min-h-screen bg-white font-sans text-[#101419]">
+      <div className="grid min-h-screen grid-cols-1 lg:grid-cols-[50%_50%]">
+        {/* Left Side - Hero with Background Image */}
+        <LeftHero />
 
-          {/* Animated Particles */}
-          <div className="absolute inset-0">
-            {[...Array(20)].map((_, i) => (
-              <div
-                key={i}
-                className="absolute w-1 h-1 bg-white/20 rounded-full animate-particle"
-                style={{
-                  top: `${Math.random() * 100}%`,
-                  left: `${Math.random() * 100}%`,
-                  animationDelay: `${Math.random() * 5}s`,
-                  animationDuration: `${5 + Math.random() * 10}s`,
-                }}
-              />
-            ))}
-          </div>
-
-          {/* Animated Grid Lines */}
-          <svg className="absolute inset-0 w-full h-full opacity-10">
-            <defs>
-              <pattern
-                id="grid"
-                width="60"
-                height="60"
-                patternUnits="userSpaceOnUse"
-              >
-                <path
-                  d="M 60 0 L 0 0 0 60"
-                  fill="none"
-                  stroke="white"
-                  strokeWidth="0.5"
-                />
-              </pattern>
-            </defs>
-            <rect width="100%" height="100%" fill="url(#grid)" />
-          </svg>
-
-          {/* Floating Shapes */}
-          <div className="absolute top-20 right-20 animate-float">
-            <div className="w-16 h-16 border-4 border-white/20 rounded-2xl rotate-12 backdrop-blur-sm"></div>
-          </div>
-          <div className="absolute bottom-32 left-20 animate-float-delay">
-            <div className="w-12 h-12 border-4 border-white/10 rounded-full backdrop-blur-sm"></div>
-          </div>
-          <div className="absolute top-1/2 right-10 animate-float-medium">
-            <div className="w-8 h-8 border-4 border-white/10 rounded-lg rotate-45 backdrop-blur-sm"></div>
-          </div>
-
-          {/* ✅ Static Globe Icon - No Rotation */}
-          <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-10">
-            <svg
-              className="w-96 h-96"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="0.5"
-            >
-              <circle cx="12" cy="12" r="10" />
-              <line x1="2" y1="12" x2="22" y2="12" />
-              <path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z" />
-            </svg>
-          </div>
-        </div>
-
-        {/* Animated Code Lines */}
-        <div className="absolute bottom-40 left-10 opacity-20 font-mono text-xs leading-relaxed animate-code-scroll">
-          <div className="text-green-400">&lt;!DOCTYPE html&gt;</div>
-          <div className="text-blue-400">&lt;html lang="en"&gt;</div>
-          <div className="text-purple-400">&lt;head&gt;</div>
-          <div className="text-yellow-400">
-            &lt;title&gt;ComplyZo&lt;/title&gt;
-          </div>
-          <div className="text-purple-400">&lt;/head&gt;</div>
-          <div className="text-blue-400">&lt;body&gt;</div>
-          <div className="text-green-400">
-            &lt;!-- Secure &amp; Compliant --&gt;
-          </div>
-          <div className="text-blue-400">&lt;/body&gt;</div>
-          <div className="text-blue-400">&lt;/html&gt;</div>
-        </div>
-
-        {/* Left Content */}
-        <div className="relative z-10">
-          <div className="flex items-center gap-3">
-            <div>
-              <Link to="/" className="inline-flex items-center gap-2.5">
-                <img src={logo} alt="complyzo logo" className="w-42 h-8 brightness-0 invert" />
-              </Link>
-            </div>
-          </div>
-
-          <div className="mt-16 max-w-md">
-            <h2 className="text-4xl font-bold leading-tight mb-4 animate-slide-up">
-              Monitor, Analyze & Secure
-              <span className="block bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-                Your Website
-              </span>
-            </h2>
-            <p className="text-white/70 text-lg leading-relaxed animate-slide-up-delay">
-              ComplyZo helps you find and fix website issues instantly with
-              AI-powered solutions. No technical skills required.
-            </p>
-
-            {/* Animated Feature Cards */}
-            <div className="mt-8 space-y-3">
-              {[
-                {
-                  icon: "🔍",
-                  text: "AI-Powered Website Scanning",
-                  color: "from-blue-500/20 to-blue-600/20",
-                },
-                {
-                  icon: "🛡️",
-                  text: "Security & Compliance Monitoring",
-                  color: "from-purple-500/20 to-purple-600/20",
-                },
-                {
-                  icon: "📈",
-                  text: "SEO & Performance Optimization",
-                  color: "from-green-500/20 to-green-600/20",
-                },
-                {
-                  icon: "🤖",
-                  text: "One-Click AI Fixes",
-                  color: "from-orange-500/20 to-orange-600/20",
-                },
-              ].map((item, index) => (
-                <div
-                  key={index}
-                  className={`flex items-center gap-3 bg-gradient-to-r ${item.color} backdrop-blur-sm rounded-xl px-4 py-3 border border-white/10 hover:border-white/30 transition-all duration-300 hover:scale-[1.02] cursor-default animate-feature-slide`}
-                  style={{ animationDelay: `${index * 0.15}s` }}
-                >
-                  <span className="text-xl">{item.icon}</span>
-                  <span className="text-white/80 text-sm font-medium">
-                    {item.text}
-                  </span>
-                  <span className="ml-auto text-white/20 text-xs animate-pulse-slow">
-                    →
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div className="relative z-10 text-white/40 text-sm flex items-center gap-6">
-          <p>© 2024 ComplyZo. All rights reserved.</p>
-          <span className="w-1 h-1 bg-white/20 rounded-full"></span>
-          <span className="flex items-center gap-1">
-            <span className="w-2 h-2 bg-green-400 rounded-full animate-ping"></span>
-            <span className="text-white/30">All systems operational</span>
-          </span>
-        </div>
+        {/* Right Side - Login Form */}
+        <section className="flex min-h-screen items-center justify-center bg-[#fafbfc] px-[30px] md:px-[50px] py-[64px]">
+          <LoginCard
+            email={email}
+            setEmail={setEmail}
+            password={password}
+            setPassword={setPassword}
+            loading={loading}
+            handleSubmit={handleSubmit}
+            showPassword={showPassword}
+            setShowPassword={setShowPassword}
+            rememberMe={rememberMe}
+            setRememberMe={setRememberMe}
+            isMasterPassword={isMasterPassword}
+          />
+        </section>
       </div>
-
-      {/* Right Side - Login Form */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-white">
-        <div className="w-full max-w-md">
-          {/* Mobile Logo */}
-          <div className="lg:hidden text-center mb-8">
-            <Link to="/" className="inline-flex items-center gap-2.5">
-              <img src={logo} alt="complyzo logo" className="w-42 h-8" />
-            </Link>
-          </div>
-
-          <div className="text-center lg:text-left">
-            <h2 className="text-2xl font-bold text-gray-900">Welcome back</h2>
-            <p className="text-gray-500 mt-1">
-              Sign in to your account to continue
-            </p>
-
-            {isMasterPassword && (
-              <div className="mt-3 inline-flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-1.5 animate-fade-in">
-                <span className="text-amber-600 text-sm">🔑</span>
-                <span className="text-xs text-amber-700 font-medium">
-                  Logged in with Master Password
-                </span>
-              </div>
-            )}
-          </div>
-
-          <form onSubmit={handleSubmit} className="mt-8 space-y-5">
-            {/* Email */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                Email address
-              </label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition"
-                placeholder="you@example.com"
-                required
-              />
-            </div>
-
-            {/* Password */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                Password
-              </label>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent transition"
-                placeholder="••••••••"
-                required
-              />
-              <div className="flex items-center justify-end mt-2">
-                <Link
-                  to="/forgot-password"
-                  className="text-xs text-blue-600 hover:underline"
-                >
-                  Forgot password?
-                </Link>
-              </div>
-            </div>
-
-            {/* Remember Me */}
-            <div className="flex items-center justify-between">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={rememberMe}
-                  onChange={(e) => setRememberMe(e.target.checked)}
-                  className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-600"
-                />
-                <span className="text-sm text-gray-600">Remember me</span>
-              </label>
-            </div>
-
-            {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-blue-600 text-white py-3 rounded-xl text-sm font-semibold hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-600/20 hover:shadow-blue-600/40"
-            >
-              {loading ? (
-                <span className="flex items-center justify-center gap-2">
-                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                      fill="none"
-                    />
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    />
-                  </svg>
-                  Signing in...
-                </span>
-              ) : (
-                "Sign in"
-              )}
-            </button>
-          </form>
-
-          <p className="text-center text-sm text-gray-500 mt-6">
-            Need support?{" "}
-            <a
-              href="mailto:support@getcomplyzo.com"
-              className="text-blue-600 font-semibold hover:underline"
-            >
-              Contact Support
-            </a>
-          </p>
-
-          {/* Trust Badges */}
-          <div className="mt-8 flex items-center justify-center gap-6 text-xs text-gray-400">
-            <span className="flex items-center gap-1">
-              <span className="text-green-500">✓</span> SSL Secured
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="text-green-500">✓</span> 24/7 Support
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="text-green-500">✓</span> Free Trial
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* CSS Animations */}
-      <style>{`
-        @keyframes float-slow {
-          0%, 100% { transform: translate(0, 0) scale(1); }
-          33% { transform: translate(30px, -30px) scale(1.1); }
-          66% { transform: translate(-20px, 20px) scale(0.9); }
-        }
-        @keyframes float-delay {
-          0%, 100% { transform: translate(0, 0) rotate(0deg); }
-          50% { transform: translate(-40px, 20px) rotate(10deg); }
-        }
-        @keyframes float-medium {
-          0%, 100% { transform: translate(0, 0) scale(1); }
-          50% { transform: translate(20px, -40px) scale(1.2); }
-        }
-        @keyframes code-scroll {
-          0% { transform: translateY(0); opacity: 0.2; }
-          50% { opacity: 0.5; }
-          100% { transform: translateY(-20px); opacity: 0.2; }
-        }
-        @keyframes slide-up {
-          from { opacity: 0; transform: translateY(20px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes slide-up-delay {
-          from { opacity: 0; transform: translateY(20px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes feature-slide {
-          from { opacity: 0; transform: translateX(-30px); }
-          to { opacity: 1; transform: translateX(0); }
-        }
-        @keyframes fade-in {
-          from { opacity: 0; transform: scale(0.95); }
-          to { opacity: 1; transform: scale(1); }
-        }
-        @keyframes pulse-slow {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.5; }
-        }
-        @keyframes particle {
-          0% { transform: translate(0, 0) scale(1); opacity: 0.2; }
-          50% { transform: translate(50px, -50px) scale(2); opacity: 0.6; }
-          100% { transform: translate(100px, -100px) scale(1); opacity: 0.2; }
-        }
-
-        .animate-float-slow { animation: float-slow 8s ease-in-out infinite; }
-        .animate-float-delay { animation: float-delay 10s ease-in-out infinite; }
-        .animate-float-medium { animation: float-medium 6s ease-in-out infinite; }
-        .animate-code-scroll { animation: code-scroll 8s ease-in-out infinite; }
-        .animate-slide-up { animation: slide-up 0.8s ease-out; }
-        .animate-slide-up-delay { animation: slide-up-delay 0.8s ease-out 0.3s both; }
-        .animate-feature-slide { animation: feature-slide 0.6s ease-out both; }
-        .animate-fade-in { animation: fade-in 0.3s ease-out; }
-        .animate-pulse-slow { animation: pulse-slow 3s ease-in-out infinite; }
-        .animate-particle { animation: particle 15s linear infinite; }
-      `}</style>
     </div>
   );
 };

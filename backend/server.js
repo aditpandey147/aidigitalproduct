@@ -1,3 +1,4 @@
+// backend/src/server.js
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
@@ -5,27 +6,42 @@ const helmet = require('helmet');
 const dotenv = require('dotenv');
 const passport = require('passport');
 const session = require('express-session');
+const path = require('path');
+const fs = require('fs');
 
 dotenv.config();
 
+// Routes
 const authRoutes = require('./routes/auth');
-const websiteRoutes = require('./routes/websites');
-const scanRoutes = require('./routes/scans');
-const alertRoutes = require('./routes/alerts');
-const automationRoutes = require('./routes/automation');
-const imageAnalyzerRoutes = require('./routes/imageAnalyzer');
-const adminRoutes = require('./routes/admin');
-const aiProfitRoutes = require('./routes/aiProfit');
 const jvzooRoutes = require('./routes/jvzoo');
+const passwordResetRoutes = require('./routes/passwordReset');
 const planRoutes = require('./routes/plans');
-const { initializeAllSchedules } = require('./jobs/automationScheduler');
+const aiProfitRoutes = require('./routes/aiProfit');
 const aiRankerRoutes = require('./routes/aiRanker');
+const productRoutes = require('./routes/productRoutes');
+const platformRoutes = require('./routes/platformRoutes');
+const coverRoutes = require('./routes/coverRoutes');
+const aiSealsRoutes = require('./routes/aiSealsRoutes');
+const templateRoutes = require('./routes/templateRoutes');
+const subscriptionRoutes = require('./routes/subscriptionRoutes');
+const adminRoutes = require('./routes/admin');
+
+const setStaticHeaders = (req, res, next) => {
+  res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin-allow-popups');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, HEAD, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Expose-Headers', 'Content-Length, Content-Disposition');
+  next();
+};
+
 
 const app = express();
 
-// CORS configuration
+// CORS
 app.use(cors({
-  origin: ['https://complyzo-frontend.vercel.app', 'http://localhost:5173', 'http://localhost:3000'],
+  origin: ['http://localhost:5173', 'http://localhost:3000', 'http://127.0.0.1:5173'],
   credentials: true,
   optionsSuccessStatus: 200
 }));
@@ -35,12 +51,7 @@ app.use(helmet());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Request logging middleware
-app.use((req, res, next) => {
-  console.log(`${req.method} ${req.url}`);
-  next();
-});
-
+// Session
 app.use(session({
   secret: process.env.JWT_SECRET || 'your-session-secret',
   resave: false,
@@ -54,70 +65,69 @@ app.use(session({
 app.use(passport.initialize());
 app.use(passport.session());
 
-// ==================== ROUTES ====================
+
+// ================================================================
+// 📁 SERVE STATIC FILES
+// ================================================================
+
+// Serve temp directory for file downloads
+app.use('/files', express.static(path.join(__dirname, 'temp')));
+app.use('/uploads', setStaticHeaders, express.static(path.join(__dirname, 'uploads')));
+app.use('/images', setStaticHeaders, express.static(path.join(__dirname, 'public/images')));
+app.use(express.static(path.join(__dirname, 'public')));
+
+// ================================================================
+// API ROUTES
+// ================================================================
 app.use('/api/auth', authRoutes);
-app.use('/api/websites', websiteRoutes);
-app.use('/api/scans', scanRoutes);
-app.use('/api/alerts', alertRoutes);
-app.use('/api/automation', automationRoutes);
-app.use('/api/image', imageAnalyzerRoutes);
-app.use('/api/admin', adminRoutes);
-app.use('/api/ai-profit', aiProfitRoutes);
-app.use('/api/jvzoo', jvzooRoutes);
-app.use('/api/password', require('./routes/passwordReset'));
+app.use('/api/register', jvzooRoutes);
+app.use('/api/password', passwordResetRoutes);
 app.use('/api/plans', planRoutes);
 app.use('/api/ai-ranker', aiRankerRoutes);
+app.use('/api/ai-profit', aiProfitRoutes);
+app.use('/api/products', productRoutes);
+app.use('/api/platforms', platformRoutes);
+app.use('/api/cover', coverRoutes);
+app.use('/api/aiseals', aiSealsRoutes);
+app.use('/api/templates', templateRoutes);
+app.use('/api/subscription', subscriptionRoutes);
+app.use('/api/admin', adminRoutes);
+
+// Serve static template files
+app.use('/templates', express.static(path.join(__dirname, 'public/templates')));
+app.use('/templates/previews', express.static(path.join(__dirname, 'public/templates/previews')));
+
 
 // Test route
 app.get('/api/test', (req, res) => {
   res.json({ 
-    message: 'Backend is working!', 
-    timestamp: new Date(),
-    endpoints: {
-      image: '/api/image/test - Check image analyzer',
-      jvzoo: '/api/jvzoo/ipn - JVZoo webhook handler',
-      auth: '/api/auth - Authentication endpoints',
-      scans: '/api/scans - Scan endpoints'
-    }
+    message: 'AI Product Factory API is working!',
+    timestamp: new Date()
   });
 });
 
-// 404 handler for undefined routes
+// 404 handler
 app.use((req, res) => {
   res.status(404).json({ 
-    message: `Route ${req.method} ${req.url} not found`,
-    availableEndpoints: [
-      'GET /api/test',
-      'POST /api/auth/signup',
-      'POST /api/auth/login',
-      'GET /api/websites',
-      'POST /api/websites',
-      'POST /api/scans',
-      'GET /api/scans/:websiteId',
-      'GET /api/scans/latest/:websiteId',
-      'GET /api/alerts',
-      'GET /api/image/test',
-      'POST /api/image/analyze-images',
-      'POST /api/jvzoo/ipn',  // ✅ Added JVZoo
-      'GET /api/jvzoo/product-links',
-      'GET /api/jvzoo/verify-payment/:email'
-    ]
+    message: `Route ${req.method} ${req.url} not found`
   });
 });
 
-// Error handling middleware
+// Error handler
 app.use((err, req, res, next) => {
   console.error(err.stack);
-  res.status(500).json({ message: 'Something went wrong!', error: err.message });
+  res.status(500).json({ 
+    message: 'Something went wrong!', 
+    error: err.message 
+  });
 });
 
 // MongoDB connection
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/compliscan';
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/product-factory';
 
 mongoose.connect(MONGODB_URI)
   .then(() => {
     console.log('✅ MongoDB connected');
-    initializeAllSchedules();
   })
   .catch(err => {
     console.log('⚠️ MongoDB not connected:', err.message);
@@ -126,7 +136,10 @@ mongoose.connect(MONGODB_URI)
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`\n🚀 Server running on http://localhost:${PORT}`);
-  console.log(`📍 CORS enabled for: http://localhost:3000, http://localhost:5173`);
   console.log(`📝 Test API: http://localhost:${PORT}/api/test`);
-  console.log(`💰 JVZoo IPN: http://localhost:${PORT}/api/jvzoo/ipn\n`);
+  console.log(`📦 Products API: http://localhost:${PORT}/api/products`);
+  console.log(`🌐 Sales Pages: http://localhost:${PORT}/sales/:productId/index.html`);
+  console.log(`💰 Payment IPN: http://localhost:${PORT}/api/register/ipn\n`);
 });
+
+module.exports = app;

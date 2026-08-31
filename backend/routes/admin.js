@@ -1,18 +1,19 @@
+// routes/admin.js
 const express = require('express');
 const router = express.Router();
 const adminAuth = require('../middleware/adminAuth');
 const User = require('../models/User');
-const Website = require('../models/Website');
-// const Scan = require('../models/Scan'); // Comment out or remove
-const Payment = require('../models/Payment'); // ✅ Add this
+const Payment = require('../models/Payment');
+const Plan = require('../models/Plan');
+const bcrypt = require('bcryptjs');
+
+// ==================== STATS ====================
 
 // Get Dashboard Stats
 router.get('/stats', adminAuth, async (req, res) => {
   try {
     const totalUsers = await User.countDocuments({ role: 'user' });
     const totalAdmins = await User.countDocuments({ role: 'admin' });
-    const totalWebsites = await Website.countDocuments();
-    // const totalScans = await Scan.countDocuments();
     
     const thisMonth = new Date();
     thisMonth.setDate(1);
@@ -31,8 +32,7 @@ router.get('/stats', adminAuth, async (req, res) => {
     res.json({
       totalUsers,
       totalAdmins,
-      totalWebsites,
-      totalScans: 0, // Default when no Scan model
+      totalScans: 0,
       newUsersThisMonth,
       activeUsers,
       scansToday: 0
@@ -42,6 +42,8 @@ router.get('/stats', adminAuth, async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 });
+
+// ==================== USER MANAGEMENT ====================
 
 // Get All Users
 router.get('/users', adminAuth, async (req, res) => {
@@ -64,13 +66,9 @@ router.get('/users', adminAuth, async (req, res) => {
       .limit(parseInt(limit));
 
     const usersWithStats = await Promise.all(users.map(async (user) => {
-      const websiteCount = await Website.countDocuments({ userId: user._id });
-      // const scanCount = await Scan.countDocuments({ userId: user._id });
-      
       return {
         ...user.toObject(),
-        websiteCount,
-        scanCount: 0, // Default
+        scanCount: 0,
         lastScanAt: null
       };
     }));
@@ -98,11 +96,7 @@ router.get('/users/:id', adminAuth, async (req, res) => {
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
-
-    const websites = await Website.find({ userId: user._id });
-    // const scans = await Scan.find({ userId: user._id }).sort({ createdAt: -1 }).limit(10);
-
-    res.json({ user, websites, scans: [] });
+    res.json({ user, scans: [] });
   } catch (error) {
     res.status(500).json({ message: 'Server error' });
   }
@@ -111,12 +105,12 @@ router.get('/users/:id', adminAuth, async (req, res) => {
 // Update User
 router.put('/users/:id', adminAuth, async (req, res) => {
   try {
-    const { name, email, plan, isActive, role } = req.body;
+    const { name, email, planId, isActive, role } = req.body;
     
     const updateData = {};
     if (name) updateData.name = name;
     if (email) updateData.email = email;
-    if (plan) updateData.plan = plan;
+    if (planId) updateData.planId = planId;
     if (typeof isActive === 'boolean') updateData.isActive = isActive;
     if (role) updateData.role = role;
 
@@ -132,6 +126,7 @@ router.put('/users/:id', adminAuth, async (req, res) => {
   }
 });
 
+// Delete User
 router.delete('/users/:id', adminAuth, async (req, res) => {
   try {
     const user = await User.findById(req.params.id);
@@ -143,19 +138,11 @@ router.delete('/users/:id', adminAuth, async (req, res) => {
       return res.status(400).json({ message: 'Cannot delete yourself' });
     }
 
-    // ✅ DELETE ALL PAYMENTS FIRST
-    const paymentResult = await Payment.deleteMany({ userId: user._id });
-    console.log(`✅ Deleted ${paymentResult.deletedCount} payments for user: ${user.email}`);
-
-    // Delete websites
-    await Website.deleteMany({ userId: user._id });
-    
-    // Delete the user
+    await Payment.deleteMany({ userId: user._id });
     await User.findByIdAndDelete(user._id);
 
     res.json({ 
-      message: 'User and all associated data deleted',
-      paymentsDeleted: paymentResult.deletedCount
+      message: 'User and all associated data deleted'
     });
   } catch (error) {
     console.error('Delete user error:', error);
@@ -183,24 +170,27 @@ router.patch('/users/:id/toggle-status', adminAuth, async (req, res) => {
   }
 });
 
-// routes/admin.js - Add this route
+// Create User (Admin)
 router.post('/users', adminAuth, async (req, res) => {
   try {
-    const { name, email, password, plan, role } = req.body;
+    const { name, email, password, planId, role } = req.body;
 
-    // Check if user exists
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ message: 'Email already registered' });
     }
 
-    // Create user
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
     const user = new User({
       name,
       email,
-      password,
-      plan: plan || 'free',
-      role: role || 'user'
+      password: hashedPassword,
+      planId: [1, planId || 1],
+      planName: 'Free',
+      role: role || 'user',
+      isActive: true
     });
 
     await user.save();
@@ -212,11 +202,246 @@ router.post('/users', adminAuth, async (req, res) => {
         name: user.name,
         email: user.email,
         role: user.role,
-        plan: user.plan
+        planId: user.planId
       }
     });
   } catch (error) {
     console.error('Admin create user error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// ==================== ✅ SUBSCRIPTION MANAGEMENT (ADD THIS) ====================
+
+// ✅ Add subscription to user
+router.post('/users/:id/subscriptions', adminAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { planId, transactionId, source, amount } = req.body;
+
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Ensure planId is an array
+    if (!Array.isArray(user.planId)) {
+      user.planId = [1];
+    }
+
+    const planIdNum = parseInt(planId);
+    if (user.planId.includes(planIdNum)) {
+      return res.status(400).json({ message: 'Plan already assigned to this user' });
+    }
+
+    // Add plan
+    user.planId.push(planIdNum);
+    await user.save();
+
+    // Create payment record
+    const plan = await Plan.findOne({ planId: planIdNum });
+    const payment = new Payment({
+      transactionId: transactionId || `ADMIN_${Date.now()}`,
+      userId: user._id,
+      buyerEmail: user.email,
+      buyerName: user.name,
+      productId: String(planId),
+      productName: plan ? plan.name : `Plan ${planId}`,
+      amount: amount || 0,
+      currency: 'USD',
+      status: 'completed',
+      paymentDate: new Date(),
+      purchasedPlanId: planIdNum,
+      purchasedPlanName: plan ? plan.name : `Plan ${planId}`,
+      platform: source || 'Admin',
+      ipnData: { source: source || 'Admin', adminAdded: true }
+    });
+    await payment.save();
+
+    res.json({ 
+      success: true,
+      message: 'Subscription added successfully', 
+      planId: planIdNum,
+      user: {
+        id: user._id,
+        planId: user.planId
+      }
+    });
+  } catch (error) {
+    console.error('Add subscription error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ✅ Remove subscription from user
+router.delete('/users/:id/subscriptions/:planId', adminAuth, async (req, res) => {
+  try {
+    const { id, planId } = req.params;
+
+    const user = await User.findById(id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    if (!Array.isArray(user.planId)) {
+      return res.status(400).json({ message: 'User has no subscriptions' });
+    }
+
+    const planIdNum = parseInt(planId);
+    
+    if (!user.planId.includes(planIdNum)) {
+      return res.status(400).json({ message: 'Plan not found in user subscriptions' });
+    }
+
+    // Remove plan
+    user.planId = user.planId.filter(p => p !== planIdNum);
+    await user.save();
+
+
+    res.json({ 
+      success: true,
+      message: 'Subscription removed successfully', 
+      planId: planIdNum,
+      user: {
+        id: user._id,
+        planId: user.planId
+      }
+    });
+  } catch (error) {
+    console.error('Remove subscription error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ==================== PAYMENT MANAGEMENT ====================
+
+// Get all payments
+router.get('/payments', adminAuth, async (req, res) => {
+  try {
+    const payments = await Payment.find()
+      .sort({ createdAt: -1 })
+      .limit(100);
+    
+    res.json(payments);
+  } catch (error) {
+    console.error('Admin payments error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Get payment by ID
+router.get('/payments/:id', adminAuth, async (req, res) => {
+  try {
+    const payment = await Payment.findById(req.params.id);
+    if (!payment) {
+      return res.status(404).json({ message: 'Payment not found' });
+    }
+    res.json(payment);
+  } catch (error) {
+    console.error('Admin payment detail error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Get payments by email
+router.get('/payments/email/:email', adminAuth, async (req, res) => {
+  try {
+    const { email } = req.params;
+    const payments = await Payment.find({ 
+      buyerEmail: { $regex: email, $options: 'i' } 
+    }).sort({ createdAt: -1 });
+    
+    res.json(payments);
+  } catch (error) {
+    console.error('Admin payment email error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// ==================== PLAN MANAGEMENT ====================
+
+// Get all plans
+router.get('/plans', adminAuth, async (req, res) => {
+  try {
+    const plans = await Plan.find().sort({ planId: 1 });
+    res.json(plans);
+  } catch (error) {
+    console.error('Admin plans error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Create plan
+router.post('/plans', adminAuth, async (req, res) => {
+  try {
+    const { name, slug, planId, jvzoo_id, launchpad_id, validity_days, status, order } = req.body;
+    
+    const existingPlan = await Plan.findOne({ $or: [{ name }, { slug }] });
+    if (existingPlan) {
+      return res.status(400).json({ message: 'Plan with this name or slug already exists' });
+    }
+
+    const plan = new Plan({
+      name,
+      slug: slug || name.toLowerCase().replace(/\s/g, '-'),
+      planId: planId || undefined,
+      jvzoo_id: jvzoo_id || '',
+      launchpad_id: launchpad_id || '',
+      validity_days: validity_days || 365,
+      status: status || 'active',
+      order: order || 0
+    });
+
+    await plan.save();
+    res.status(201).json({ message: 'Plan created successfully', plan });
+  } catch (error) {
+    console.error('Admin create plan error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Update plan
+router.put('/plans/:id', adminAuth, async (req, res) => {
+  try {
+    const { name, slug, planId, jvzoo_id, launchpad_id, validity_days, status, order } = req.body;
+    
+    const plan = await Plan.findByIdAndUpdate(
+      req.params.id,
+      {
+        name,
+        slug: slug || name.toLowerCase().replace(/\s/g, '-'),
+        planId,
+        jvzoo_id,
+        launchpad_id,
+        validity_days,
+        status,
+        order,
+        updated_at: Date.now()
+      },
+      { new: true }
+    );
+
+    if (!plan) {
+      return res.status(404).json({ message: 'Plan not found' });
+    }
+
+    res.json({ message: 'Plan updated successfully', plan });
+  } catch (error) {
+    console.error('Admin update plan error:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Delete plan
+router.delete('/plans/:id', adminAuth, async (req, res) => {
+  try {
+    const plan = await Plan.findByIdAndDelete(req.params.id);
+    if (!plan) {
+      return res.status(404).json({ message: 'Plan not found' });
+    }
+    res.json({ message: 'Plan deleted successfully' });
+  } catch (error) {
+    console.error('Admin delete plan error:', error);
     res.status(500).json({ message: 'Server error' });
   }
 });
