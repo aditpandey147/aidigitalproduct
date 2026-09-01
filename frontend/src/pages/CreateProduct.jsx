@@ -336,7 +336,9 @@ const CreateProduct = () => {
   // ✅ Show toast when data is auto-filled
   useEffect(() => {
     if (productDataFromNav) {
-      toast.success(`📋 "${productDataFromNav.title}" loaded! Edit and generate.`);
+      toast.success(
+        `📋 "${productDataFromNav.title}" loaded! Edit and generate.`,
+      );
       console.log("📦 Auto-filled from product:", productDataFromNav);
     }
   }, [productDataFromNav]);
@@ -722,28 +724,96 @@ const CreateProduct = () => {
 
   if (showLoader) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/10 backdrop-blur-xl">
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0a0a0a]/60 backdrop-blur-2xl">
+        {/* ===== AMBIENT GLOW ===== */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-[#FACC15]/10 rounded-full blur-[120px]" />
+        </div>
+
         {/* ===== CONTENT ===== */}
-        <div className="relative flex flex-col items-center gap-8">
+        <div className="relative flex flex-col items-center gap-10">
           {/* ===== AI BADGE ===== */}
-          <div className="bg-gradient-to-r from-[#FACC15] to-[#e5b800] text-[#111111] px-6 py-2 rounded-full text-sm font-bold tracking-wider shadow-lg flex items-center gap-3 border border-white/30">
-            <span className="relative flex h-2.5 w-2.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#111111] opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#111111]"></span>
+          <div className="relative bg-gradient-to-r from-[#FACC15] to-[#e5b800] text-[#111111] px-6 py-2.5 rounded-full text-xs font-bold tracking-[0.15em] shadow-[0_8px_30px_rgba(250,204,21,0.35)] flex items-center gap-3 border border-white/40">
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#111111] opacity-60"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-[#111111]"></span>
             </span>
             AI GENERATING
-            <span className="relative flex h-2.5 w-2.5">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#111111] opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-[#111111]"></span>
+            <span className="relative flex h-2 w-2">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#111111] opacity-60"></span>
+              <span className="relative inline-flex rounded-full h-2 w-2 bg-[#111111]"></span>
             </span>
           </div>
 
           {/* ===== LOADER ===== */}
-          <div className="relative">
-            <div className="absolute inset-0 border-4 border-[#FACC15]/20 rounded-full animate-ping"></div>
-            <div className="w-16 h-16 border-4 border-t-[#FACC15] border-r-transparent border-b-transparent border-l-transparent rounded-full animate-spin"></div>
-            <div className="absolute inset-0 flex items-center justify-center">
-              <span className="text-2xl">✨</span>
+          <div className="relative w-24 h-24 flex items-center justify-center">
+            {/* outer pulse ring */}
+            <div
+              className="absolute inset-0 border border-[#FACC15]/20 rounded-full animate-ping"
+              style={{ animationDuration: "2s" }}
+            ></div>
+
+            {/* static track */}
+            <div className="absolute inset-2 border-2 border-white/5 rounded-full"></div>
+
+            {/* primary spinner */}
+            <div
+              className="absolute inset-2 rounded-full animate-spin"
+              style={{
+                animationDuration: "1.1s",
+                background:
+                  "conic-gradient(from 0deg, transparent 0%, #FACC15 100%)",
+                WebkitMask:
+                  "radial-gradient(farthest-side, transparent calc(100% - 3px), black calc(100% - 3px))",
+                mask: "radial-gradient(farthest-side, transparent calc(100% - 3px), black calc(100% - 3px))",
+              }}
+            ></div>
+
+            {/* secondary counter-spinner for depth */}
+            <div
+              className="absolute inset-5 rounded-full animate-spin opacity-40"
+              style={{
+                animationDuration: "1.6s",
+                animationDirection: "reverse",
+                background:
+                  "conic-gradient(from 0deg, transparent 0%, #FACC15 100%)",
+                WebkitMask:
+                  "radial-gradient(farthest-side, transparent calc(100% - 2px), black calc(100% - 2px))",
+                mask: "radial-gradient(farthest-side, transparent calc(100% - 2px), black calc(100% - 2px))",
+              }}
+            ></div>
+
+            {/* center icon */}
+            <div className="relative z-10 w-9 h-9 flex items-center justify-center">
+              <svg viewBox="0 0 24 24" fill="none" className="w-full h-full">
+                <path
+                  d="M12 2L14.2 9.2L21 12L14.2 14.8L12 22L9.8 14.8L3 12L9.8 9.2L12 2Z"
+                  fill="#FACC15"
+                  className="animate-pulse"
+                  style={{ animationDuration: "1.4s" }}
+                />
+              </svg>
+            </div>
+          </div>
+
+          {/* ===== STATUS TEXT ===== */}
+          <div className="flex flex-col items-center gap-2">
+            <p className="text-white/90 text-sm font-medium tracking-wide">
+              Crafting your result
+            </p>
+            <div className="flex items-center gap-1.5">
+              <span
+                className="w-1.5 h-1.5 rounded-full bg-[#FACC15] animate-bounce"
+                style={{ animationDelay: "0ms" }}
+              ></span>
+              <span
+                className="w-1.5 h-1.5 rounded-full bg-[#FACC15] animate-bounce"
+                style={{ animationDelay: "150ms" }}
+              ></span>
+              <span
+                className="w-1.5 h-1.5 rounded-full bg-[#FACC15] animate-bounce"
+                style={{ animationDelay: "300ms" }}
+              ></span>
             </div>
           </div>
         </div>
@@ -762,14 +832,25 @@ const CreateProduct = () => {
         <div className="flex-1 ml-0 md:ml-[264px] flex flex-col overflow-hidden">
           <Navbar />
           <main className="flex-1 overflow-y-auto p-6 flex items-center justify-center">
-            <div className="bg-white rounded-3xl shadow-xl border border-[#E5E7EB] p-12 text-center max-w-md mx-auto">
-              {/* ✅ Animated Success Icon in Green Circle */}
-              <div className="relative w-32 h-32 mx-auto mb-6">
-                <div className="absolute inset-0 bg-green-500 rounded-full animate-ping opacity-75"></div>
-                <div className="absolute inset-0 bg-green-500 rounded-full animate-pulse"></div>
-                <div className="relative z-10 w-32 h-32 bg-green-500 rounded-full flex items-center justify-center shadow-lg transform transition-transform duration-500 hover:scale-110">
+            <div className="relative bg-white rounded-3xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.15)] border border-[#ECECE9] p-12 text-center max-w-md mx-auto overflow-hidden">
+              {/* ambient glow behind the icon */}
+              <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-64 bg-green-500/10 rounded-full blur-[80px] pointer-events-none"></div>
+
+              {/* ===== Animated Success Icon ===== */}
+              <div className="relative w-28 h-28 mx-auto mb-8">
+                {/* soft outer ring pulse */}
+                <div
+                  className="absolute inset-0 bg-green-500/20 rounded-full animate-ping opacity-60"
+                  style={{ animationDuration: "2s" }}
+                ></div>
+
+                {/* static ring for depth */}
+                <div className="absolute -inset-2 rounded-full border border-green-500/15"></div>
+
+                {/* main circle with gradient instead of flat fill */}
+                <div className="relative z-10 w-28 h-28 bg-gradient-to-b from-green-400 to-green-600 rounded-full flex items-center justify-center shadow-[0_10px_30px_-5px_rgba(34,197,94,0.5)] transition-transform duration-500 hover:scale-105">
                   <svg
-                    className="w-16 h-16 text-white"
+                    className="w-14 h-14 text-white"
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -779,18 +860,36 @@ const CreateProduct = () => {
                       strokeLinejoin="round"
                       strokeWidth="3"
                       d="M5 13l4 4L19 7"
+                      strokeDasharray="24"
+                      strokeDashoffset="24"
+                      style={{
+                        animation: "draw-check 0.5s ease-out 0.3s forwards",
+                      }}
                     />
                   </svg>
                 </div>
               </div>
 
-              <h2 className="text-2xl font-bold text-[#111111] mb-2">
-                Success!
+              {/* ===== Copy ===== */}
+              <h2 className="text-2xl font-semibold text-[#111111] mb-2 tracking-tight">
+                Success
               </h2>
-              <p className="text-[#6B7280]">
-                Your product has been generated successfully.
+              <p className="text-[#6B7280] text-[15px] leading-relaxed mb-8">
+                Your product has been generated successfully and is ready to
+                view.
               </p>
+
+              {/* ===== Action ===== */}
+              <button className="w-full bg-[#111111] text-white font-medium text-sm py-3 rounded-xl hover:bg-[#222222] transition-colors duration-200 shadow-sm">
+                View product
+              </button>
             </div>
+
+            <style>{`
+        @keyframes draw-check {
+          to { stroke-dashoffset: 0; }
+        }
+      `}</style>
           </main>
         </div>
       </div>
@@ -817,7 +916,7 @@ const CreateProduct = () => {
                   Create New Product
                 </h1>
                 <p className="mt-1 text-[15px] text-[#6B7280]">
-                  {productDataFromNav 
+                  {productDataFromNav
                     ? `Editing "${productDataFromNav.title}" - Modify and generate`
                     : "Describe your idea and let AI create a complete digital product for you."}
                 </p>
