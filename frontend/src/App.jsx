@@ -17,6 +17,7 @@ import Subscription from "./pages/auth/Subscription";
 
 //Pages
 import Dashboard from "./pages/Dashboard";
+import TopicFinder from './pages/TopicFinder';
 import ProductList from "./pages/ProductList";
 import CreateProduct from "./pages/CreateProduct";
 import ProductEditor from "./pages/ProductEditor";
@@ -65,6 +66,7 @@ const Layout = ({ children }) => {
     "/settings",
     "/subscription",
     "/reseller",
+    "/topic-finder",
   ];
 
   // ✅ Check if current path is a dashboard page
@@ -122,6 +124,14 @@ function App() {
                 </PrivateRoute>
               }
             />
+
+            <Route
+             path="/topic-finder" 
+             element={
+              <PrivateRoute>
+                <TopicFinder/>
+              </PrivateRoute>
+            } />
 
             <Route
               path="/products"
