@@ -26,6 +26,7 @@ import {
   X,
   FolderOpen,
   Gift,
+  Lightbulb,
 } from "lucide-react";
 
 const Sidebar = () => {
@@ -136,6 +137,12 @@ const Sidebar = () => {
       label: "Dashboard",
       icon: LayoutDashboard,
       show: true,
+    },
+    {
+      path: "/topic-finder",
+      label: "Topic Finder",
+      icon: Lightbulb,
+      show: true, // Or hasAnyPlan([7]) if you want to restrict
     },
     {
       path: "/create",
