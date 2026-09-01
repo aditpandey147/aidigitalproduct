@@ -25,6 +25,7 @@ const aiSealsRoutes = require('./routes/aiSealsRoutes');
 const templateRoutes = require('./routes/templateRoutes');
 const subscriptionRoutes = require('./routes/subscriptionRoutes');
 const adminRoutes = require('./routes/admin');
+const topicRoutes = require('./routes/topicRoutes');
 
 const setStaticHeaders = (req, res, next) => {
   res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
@@ -92,6 +93,7 @@ app.use('/api/aiseals', aiSealsRoutes);
 app.use('/api/templates', templateRoutes);
 app.use('/api/subscription', subscriptionRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/topics', topicRoutes);
 
 // Serve static template files
 app.use('/templates', express.static(path.join(__dirname, 'public/templates')));
