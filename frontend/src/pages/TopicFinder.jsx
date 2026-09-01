@@ -1,5 +1,5 @@
 // frontend/src/pages/TopicFinder.jsx
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import Sidebar from "../components/Sidebar";
@@ -28,6 +28,9 @@ import {
   Star as StarIcon,
   List,
   LayoutGrid,
+  Trash2,
+  Clock,
+  Save,
 } from "lucide-react";
 
 const TopicFinder = () => {
@@ -40,7 +43,49 @@ const TopicFinder = () => {
   const [selectedTopics, setSelectedTopics] = useState([]);
   const [copied, setCopied] = useState(null);
   const [usingTopic, setUsingTopic] = useState(null);
-  const [viewMode, setViewMode] = useState("table"); // "table" or "grid"
+  const [viewMode, setViewMode] = useState("table");
+  const [lastGeneratedTopic, setLastGeneratedTopic] = useState("");
+  const [lastGeneratedProductType, setLastGeneratedProductType] = useState("");
+
+  // ✅ Load saved topics from localStorage on mount
+  useEffect(() => {
+    const savedTopics = localStorage.getItem("topicFinder_topics");
+    const savedTopic = localStorage.getItem("topicFinder_lastTopic");
+    const savedProductType = localStorage.getItem("topicFinder_lastProductType");
+
+    if (savedTopics) {
+      try {
+        const parsed = JSON.parse(savedTopics);
+        if (parsed.length > 0) {
+          setTopics(parsed);
+          toast.success(`📂 Loaded ${parsed.length} saved topics from your session`, {
+            duration: 3000,
+          });
+        }
+      } catch (e) {
+        console.error("Failed to load saved topics:", e);
+      }
+    }
+
+    if (savedTopic) {
+      setTopic(savedTopic);
+      setLastGeneratedTopic(savedTopic);
+    }
+
+    if (savedProductType) {
+      setProductType(savedProductType);
+      setLastGeneratedProductType(savedProductType);
+    }
+  }, []);
+
+  // ✅ Save topics to localStorage whenever they change
+  useEffect(() => {
+    if (topics.length > 0) {
+      localStorage.setItem("topicFinder_topics", JSON.stringify(topics));
+      localStorage.setItem("topicFinder_lastTopic", topic);
+      localStorage.setItem("topicFinder_lastProductType", productType);
+    }
+  }, [topics, topic, productType]);
 
   // Product Types
   const productTypes = [
@@ -72,13 +117,29 @@ const TopicFinder = () => {
 
       if (response.data.success) {
         setTopics(response.data.topics);
-        toast.success(`Generated ${response.data.topics.length} topics!`);
+        setLastGeneratedTopic(topic.trim());
+        setLastGeneratedProductType(productType);
+        toast.success(`Generated ${response.data.topics.length} topics! Saved to your session.`);
       }
     } catch (error) {
       console.error("Error generating topics:", error);
       toast.error("Failed to generate topics. Please try again.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  // ✅ Clear all saved topics
+  const clearAllTopics = () => {
+    if (topics.length === 0) return;
+    
+    if (window.confirm("Are you sure you want to clear all saved topics?")) {
+      setTopics([]);
+      setSelectedTopics([]);
+      localStorage.removeItem("topicFinder_topics");
+      localStorage.removeItem("topicFinder_lastTopic");
+      localStorage.removeItem("topicFinder_lastProductType");
+      toast.success("All topics cleared");
     }
   };
 
@@ -124,7 +185,7 @@ const TopicFinder = () => {
     setSelectedTopics((prev) =>
       prev.find((t) => t.id === topicItem.id)
         ? prev.filter((t) => t.id !== topicItem.id)
-        : [...prev, topicItem],
+        : [...prev, topicItem]
     );
   };
 
@@ -201,7 +262,7 @@ const TopicFinder = () => {
         topics.length > 0
           ? Math.round(
               topics.reduce((acc, t) => acc + (t.trending || 0), 0) /
-                topics.length,
+                topics.length
             )
           : 0,
       icon: BarChart3,
@@ -240,6 +301,7 @@ const TopicFinder = () => {
     "Multiple product type suggestions",
     "Save and export your favorite topics",
     "One-click product creation",
+    "💾 Topics are saved automatically - come back anytime!",
   ];
 
   return (
@@ -254,9 +316,7 @@ const TopicFinder = () => {
               {/* LEFT COLUMN - Search & Results (70%) */}
               <div className="flex-1 min-w-0">
                 {/* ===== HERO BANNER ===== */}
-                {/* Header - Premium Banner */}
                 <div className="relative overflow-hidden rounded-2xl mb-6 shadow-xl border border-gray-800/50 bg-[#111827]">
-                  {/* Right-side image with gradient overlay */}
                   <div className="absolute inset-y-0 right-0 w-1/2 md:w-2/5">
                     <div
                       className="absolute inset-0 bg-cover bg-right"
@@ -264,52 +324,37 @@ const TopicFinder = () => {
                     ></div>
                     <div className="absolute inset-0 bg-gradient-to-r from-[#111827] via-[#111827]/70 to-transparent"></div>
                   </div>
-
-                  {/* Glow accent */}
                   <div className="absolute -top-10 -left-10 w-64 h-64 bg-[#FACC15]/10 rounded-full blur-[90px] pointer-events-none"></div>
 
-                  {/* Content */}
-                  <div className="relative z-10 p-6 md:p-8 lg:p-10">
-                    <div className="max-w-[650px]">
-                      {/* AI Powered Badge */}
-                      <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-[#ffd21f]/40 bg-[#ffd21f]/15 px-3 py-1 text-[11px] font-bold text-[#ffd21f]">
-                        <i className="fa-solid fa-wand-magic-sparkles"></i>{" "}
-                        AI-POWERED RESEARCH
-                      </div>
-
-                      {/* Heading */}
-                      <h1 className="text-[30px] font-black uppercase leading-[1.05] tracking-tight sm:text-[36px] text-white">
-                        FIND YOUR NEXT{" "}
-                        <span className="block text-[#ffd21f]">
-                          WINNING PRODUCT IDEA
+                  <div className="relative z-10 max-w-[650px] p-6 md:p-8 lg:p-10">
+                    <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-[#ffd21f]/40 bg-[#ffd21f]/15 px-3 py-1 text-[11px] font-bold text-[#ffd21f]">
+                      <i className="fa-solid fa-wand-magic-sparkles"></i>{" "}
+                      AI-POWERED RESEARCH
+                    </div>
+                    <h1 className="text-[30px] font-black uppercase leading-[1.05] tracking-tight sm:text-[36px] text-white">
+                      FIND YOUR NEXT{" "}
+                      <span className="block text-[#ffd21f]">
+                        WINNING PRODUCT IDEA
+                      </span>
+                    </h1>
+                    <p className="mt-3 max-w-[620px] text-[14px] leading-5 text-slate-300">
+                      Discover profitable digital product topics, analyze
+                      demand, and find opportunities before you start creating.
+                    </p>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {[
+                        ["fa-arrow-trend-up", "Trendy Topics"],
+                        ["fa-bullseye", "Profitable Niches"],
+                        ["fa-bolt", "Instant Ideas"],
+                      ].map(([icon, text]) => (
+                        <span
+                          key={text}
+                          className="inline-flex items-center gap-2 rounded-full border border-slate-700 bg-slate-800/70 px-3 py-1.5 text-[10px] font-bold text-white"
+                        >
+                          <i className={`fa-solid ${icon} text-[#ffd21f]`}></i>{" "}
+                          {text}
                         </span>
-                      </h1>
-
-                      {/* Description */}
-                      <p className="mt-3 max-w-[620px] text-[14px] leading-5 text-slate-300">
-                        Discover profitable digital product topics, analyze
-                        demand, and find opportunities before you start
-                        creating.
-                      </p>
-
-                      {/* Tags */}
-                      <div className="mt-4 flex flex-wrap gap-2">
-                        {[
-                          ["fa-arrow-trend-up", "Trendy Topics"],
-                          ["fa-bullseye", "Profitable Niches"],
-                          ["fa-bolt", "Instant Ideas"],
-                        ].map(([icon, text]) => (
-                          <span
-                            key={text}
-                            className="inline-flex items-center gap-2 rounded-full border border-slate-700 bg-slate-800/70 px-3 py-1.5 text-[10px] font-bold text-white"
-                          >
-                            <i
-                              className={`fa-solid ${icon} text-[#ffd21f]`}
-                            ></i>{" "}
-                            {text}
-                          </span>
-                        ))}
-                      </div>
+                      ))}
                     </div>
                   </div>
                 </div>
@@ -353,7 +398,7 @@ const TopicFinder = () => {
                       </select>
                     </div>
 
-                    <div className="flex items-end">
+                    <div className="flex items-end gap-2">
                       <button
                         onClick={generateTopics}
                         disabled={loading}
@@ -371,8 +416,18 @@ const TopicFinder = () => {
                           </>
                         )}
                       </button>
+                      {topics.length > 0 && (
+                        <button
+                          onClick={clearAllTopics}
+                          className="px-3 py-3 bg-red-50 text-red-600 rounded-xl hover:bg-red-100 transition"
+                          title="Clear all saved topics"
+                        >
+                          <Trash2 className="w-5 h-5" />
+                        </button>
+                      )}
                     </div>
                   </div>
+
 
                   <div className="mt-4 flex flex-wrap gap-2">
                     <span className="text-xs text-gray-500 font-medium flex items-center gap-1">
@@ -502,7 +557,7 @@ const TopicFinder = () => {
                             <tbody className="divide-y divide-gray-100">
                               {topics.map((topicItem) => {
                                 const isSelected = selectedTopics.some(
-                                  (t) => t.id === topicItem.id,
+                                  (t) => t.id === topicItem.id
                                 );
                                 return (
                                   <tr
@@ -530,17 +585,15 @@ const TopicFinder = () => {
                                           {topicItem.title}
                                         </p>
                                         <p className="text-xs text-gray-400 truncate">
-                                          {topicItem.description?.slice(
-                                            0,
-                                            60,
-                                          ) || "Trending topic"}
+                                          {topicItem.description?.slice(0, 60) ||
+                                            "Trending topic"}
                                         </p>
                                       </div>
                                     </td>
                                     <td className="px-4 py-3">
                                       <span
                                         className={`font-semibold ${getTrendingColor(
-                                          topicItem.trending || 85,
+                                          topicItem.trending || 85
                                         )}`}
                                       >
                                         {topicItem.trending || 85}%
@@ -551,7 +604,9 @@ const TopicFinder = () => {
                                         <div
                                           className="bg-blue-500 h-1.5 rounded-full"
                                           style={{
-                                            width: `${topicItem.demand || 80}%`,
+                                            width: `${
+                                              topicItem.demand || 80
+                                            }%`,
                                           }}
                                         ></div>
                                       </div>
@@ -577,7 +632,7 @@ const TopicFinder = () => {
                                     <td className="px-4 py-3">
                                       <span
                                         className={`text-xs px-2 py-0.5 rounded-full ${getDifficultyBadge(
-                                          topicItem.difficulty || "Medium",
+                                          topicItem.difficulty || "Medium"
                                         )}`}
                                       >
                                         {topicItem.difficulty || "Medium"}
@@ -592,7 +647,7 @@ const TopicFinder = () => {
                                           onClick={() =>
                                             handleCopy(
                                               topicItem.title,
-                                              topicItem.id,
+                                              topicItem.id
                                             )
                                           }
                                           className="p-1.5 hover:bg-gray-100 rounded-lg transition"
@@ -608,7 +663,9 @@ const TopicFinder = () => {
                                           onClick={() =>
                                             handleUseTopic(topicItem)
                                           }
-                                          disabled={usingTopic === topicItem.id}
+                                          disabled={
+                                            usingTopic === topicItem.id
+                                          }
                                           className="px-3 py-1 bg-[#FACC15] text-[#111827] text-xs font-medium rounded-lg hover:bg-[#F59E0B] transition flex items-center gap-1 disabled:opacity-50"
                                         >
                                           {usingTopic === topicItem.id ? (
@@ -628,11 +685,11 @@ const TopicFinder = () => {
                         </div>
                       </div>
                     ) : (
-                      /* GRID VIEW (same as before) */
+                      /* GRID VIEW */
                       <div className="grid grid-cols-1 gap-4">
                         {topics.map((topicItem) => {
                           const isSelected = selectedTopics.some(
-                            (t) => t.id === topicItem.id,
+                            (t) => t.id === topicItem.id
                           );
                           return (
                             <div
@@ -651,7 +708,7 @@ const TopicFinder = () => {
                                     </span>
                                     <span
                                       className={`text-xs px-2 py-0.5 rounded-full ${getDifficultyBadge(
-                                        topicItem.difficulty || "Medium",
+                                        topicItem.difficulty || "Medium"
                                       )}`}
                                     >
                                       {topicItem.difficulty || "Medium"}
@@ -692,7 +749,8 @@ const TopicFinder = () => {
                                         ))}
                                       {topicItem.keywords.length > 3 && (
                                         <span className="text-[10px] text-gray-400">
-                                          +{topicItem.keywords.length - 3} more
+                                          +
+                                          {topicItem.keywords.length - 3} more
                                         </span>
                                       )}
                                     </div>
@@ -705,7 +763,9 @@ const TopicFinder = () => {
                                         ? "bg-[#FACC15] border-[#FACC15]"
                                         : "border-gray-300 hover:border-[#FACC15]"
                                     }`}
-                                    onClick={() => toggleSelectTopic(topicItem)}
+                                    onClick={() =>
+                                      toggleSelectTopic(topicItem)
+                                    }
                                   >
                                     {isSelected && (
                                       <Check className="w-3.5 h-3.5 text-[#111827]" />
@@ -871,6 +931,29 @@ const TopicFinder = () => {
                     </div>
                   </div>
                 </div>
+
+                {/* Session Info Card */}
+                {topics.length > 0 && (
+                  <div className="bg-emerald-50 rounded-2xl p-4 border border-emerald-200">
+                    <div className="flex items-start gap-3">
+                      <div className="p-1.5 bg-emerald-100 rounded-lg">
+                        <Save className="w-4 h-4 text-emerald-600" />
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-semibold text-gray-900">
+                          💾 Topics Saved
+                        </h4>
+                        <p className="text-xs text-gray-600 mt-1">
+                          {topics.length} topics saved in your session. They'll
+                          stay here when you come back!
+                        </p>
+                        <p className="text-[10px] text-gray-500 mt-1">
+                          Last search: "{lastGeneratedTopic || topic}"
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
