@@ -258,8 +258,9 @@ const CreateProduct = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // ✅ Get product data from navigation state
-  const productDataFromNav = location.state?.productData || null;
+  // ✅ Get product data from navigation state (supports both formats)
+  const productDataFromNav = location.state?.topicData || location.state?.productData || null;
+  const fromTopicFinder = location.state?.fromTopicFinder || false;
 
   const [loading, setLoading] = useState(false);
   const [generating, setGenerating] = useState(false);
@@ -292,26 +293,67 @@ const CreateProduct = () => {
   const [generationComplete, setGenerationComplete] = useState(false);
 
   // ✅ Initialize form data with product data from navigation
-  const [formData, setFormData] = useState({
-    productType: productDataFromNav?.productType || "",
-    title: productDataFromNav?.title || "",
-    niche: productDataFromNav?.niche || "",
-    audience: productDataFromNav?.audience || "",
-    problem: productDataFromNav?.problem || "",
-    outcome: productDataFromNav?.outcome || "",
-    language: productDataFromNav?.language || "English",
-    tone: productDataFromNav?.tone || "Professional",
-    authorName: productDataFromNav?.authorName || "",
-    brandName: productDataFromNav?.brandName || "",
-    length: "Medium (50-80 pages)",
-    outline: null,
-    content: null,
-    design: null,
-    files: null,
-    salesPage: null,
-    marketing: null,
-    coverImage: productDataFromNav?.coverImage || null,
-    pdfPath: null,
+  const [formData, setFormData] = useState(() => {
+    // Check if we have data from Topic Finder
+    if (productDataFromNav) {
+      return {
+        productType: productDataFromNav.productType || "",
+        title: productDataFromNav.title || "",
+        niche: productDataFromNav.niche || "",
+        audience: productDataFromNav.audience || "",
+        problem: productDataFromNav.problem || "",
+        outcome: productDataFromNav.outcome || "",
+        language: productDataFromNav.language || "English",
+        tone: productDataFromNav.tone || "Professional",
+        authorName: productDataFromNav.authorName || "",
+        brandName: productDataFromNav.brandName || "",
+        length: "Medium (50-80 pages)",
+        outline: null,
+        content: null,
+        design: null,
+        files: null,
+        salesPage: null,
+        marketing: null,
+        coverImage: productDataFromNav.coverImage || null,
+        pdfPath: null,
+        // ✅ Additional fields from Topic Finder
+        keywords: productDataFromNav.keywords || [],
+        estimatedSales: productDataFromNav.estimatedSales || "",
+        difficulty: productDataFromNav.difficulty || "Medium",
+        platform: productDataFromNav.platform || "",
+        trending: productDataFromNav.trending || 0,
+        demand: productDataFromNav.demand || 0,
+        competition: productDataFromNav.competition || 0,
+      };
+    }
+    return {
+      productType: "",
+      title: "",
+      niche: "",
+      audience: "",
+      problem: "",
+      outcome: "",
+      language: "English",
+      tone: "Professional",
+      authorName: "",
+      brandName: "",
+      length: "Medium (50-80 pages)",
+      outline: null,
+      content: null,
+      design: null,
+      files: null,
+      salesPage: null,
+      marketing: null,
+      coverImage: null,
+      pdfPath: null,
+      keywords: [],
+      estimatedSales: "",
+      difficulty: "Medium",
+      platform: "",
+      trending: 0,
+      demand: 0,
+      competition: 0,
+    };
   });
 
   const [progress, setProgress] = useState({
@@ -333,15 +375,22 @@ const CreateProduct = () => {
   // ✅ productTypes is now defined, so this works
   const selectedType = productTypes.find((t) => t.id === formData.productType);
 
-  // ✅ Show toast when data is auto-filled
+  // ✅ Show toast when data is auto-filled from Topic Finder
   useEffect(() => {
-    if (productDataFromNav) {
+    if (productDataFromNav && fromTopicFinder) {
+      toast.success(
+        `📋 Topic "${productDataFromNav.title}" loaded! Edit and generate.`,
+        { duration: 4000 }
+      );
+      console.log("📦 Auto-filled from Topic Finder:", productDataFromNav);
+    } else if (productDataFromNav) {
       toast.success(
         `📋 "${productDataFromNav.title}" loaded! Edit and generate.`,
+        { duration: 3000 }
       );
-      console.log("📦 Auto-filled from product:", productDataFromNav);
+      console.log("📦 Auto-filled from product data:", productDataFromNav);
     }
-  }, [productDataFromNav]);
+  }, [productDataFromNav, fromTopicFinder]);
 
   useEffect(() => {
     // Check if there's a generation in progress from localStorage
@@ -439,7 +488,7 @@ const CreateProduct = () => {
 
         console.log("📊 Progress data:", data);
         console.log(
-          `📊 Progress: ${data.progress}% - ${data.currentStepLabel}`,
+          `📊 Progress: ${data.progress}% - ${data.currentStepLabel}`
         );
 
         if (data.status === "completed") {
@@ -528,7 +577,7 @@ const CreateProduct = () => {
 
           const currentStepIndex = Math.min(
             Math.floor((progressVal / 100) * stepLabels.length),
-            stepLabels.length - 1,
+            stepLabels.length - 1
           );
 
           // Update progress state
@@ -539,8 +588,8 @@ const CreateProduct = () => {
                 i < currentStepIndex
                   ? "completed"
                   : i === currentStepIndex
-                    ? "in-progress"
-                    : "pending",
+                  ? "in-progress"
+                  : "pending",
             }));
             return {
               ...prev,
@@ -558,8 +607,8 @@ const CreateProduct = () => {
               i < currentStepIndex
                 ? "completed"
                 : i === currentStepIndex && progressVal < 100
-                  ? "in-progress"
-                  : "pending",
+                ? "in-progress"
+                : "pending",
           }));
 
           setLiveProgress({
@@ -569,7 +618,7 @@ const CreateProduct = () => {
           });
 
           console.log(
-            `📊 Progress updated: ${progressVal}% - ${stepLabels[currentStepIndex]}`,
+            `📊 Progress updated: ${progressVal}% - ${stepLabels[currentStepIndex]}`
           );
         }
       } catch (error) {
@@ -916,12 +965,22 @@ const CreateProduct = () => {
                   Create New Product
                 </h1>
                 <p className="mt-1 text-[15px] text-[#6B7280]">
-                  {productDataFromNav
+                  {fromTopicFinder
+                    ? `🎯 From Topic Finder: "${productDataFromNav?.title}" - Modify and generate`
+                    : productDataFromNav
                     ? `Editing "${productDataFromNav.title}" - Modify and generate`
                     : "Describe your idea and let AI create a complete digital product for you."}
                 </p>
               </div>
-              {productDataFromNav && (
+              {fromTopicFinder && (
+                <div className="flex items-center gap-2">
+                  <span className="px-3 py-1.5 bg-emerald-50 text-emerald-700 text-xs font-semibold rounded-full flex items-center gap-1.5 border border-emerald-200">
+                    <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse"></span>
+                    🎯 From Topic Finder
+                  </span>
+                </div>
+              )}
+              {productDataFromNav && !fromTopicFinder && (
                 <div className="flex items-center gap-2">
                   <span className="px-3 py-1.5 bg-[#FACC15]/20 text-[#111820] text-xs font-semibold rounded-full flex items-center gap-1.5">
                     <span className="w-2 h-2 bg-[#FACC15] rounded-full animate-pulse"></span>
@@ -1084,26 +1143,6 @@ const CreateProduct = () => {
                       />
                     </div>
 
-                    {/* Language
-                    <div>
-                      <label className="mb-[6px] block text-[12px] font-medium text-[#111111]">
-                        Language
-                      </label>
-                      <select
-                        name="language"
-                        value={formData.language}
-                        onChange={handleInputChange}
-                        disabled={generating}
-                        className="h-[36px] w-full rounded-[6px] border border-[#E5E7EB] bg-[#F8F8F6] px-[10px] text-[12px] text-[#111111] outline-none focus:border-[#FACC15] focus:ring-1 focus:ring-[#FACC15] disabled:opacity-50"
-                      >
-                        {languages.map((lang) => (
-                          <option key={lang} value={lang}>
-                            {lang}
-                          </option>
-                        ))}
-                      </select>
-                    </div> */}
-
                     {/* Tone */}
                     <div>
                       <label className="mb-[6px] block text-[12px] font-medium text-[#111111]">
@@ -1155,39 +1194,6 @@ const CreateProduct = () => {
                         className="h-[36px] w-full rounded-[6px] border border-[#E5E7EB] bg-[#F8F8F6] px-[10px] text-[12px] text-[#111111] outline-none placeholder:text-[#6B7280] focus:border-[#FACC15] focus:ring-1 focus:ring-[#FACC15] disabled:opacity-50"
                       />
                     </div>
-
-                    {/* Approximate Length
-                    <div>
-                      <label className="mb-[6px] block text-[12px] font-medium text-[#111111]">
-                        Approximate Length
-                      </label>
-                      <select
-                        name="length"
-                        value={formData.length}
-                        onChange={handleInputChange}
-                        disabled={generating}
-                        className="h-[36px] w-full rounded-[6px] border border-[#E5E7EB] bg-[#F8F8F6] px-[10px] text-[12px] text-[#111111] outline-none focus:border-[#FACC15] focus:ring-1 focus:ring-[#FACC15] disabled:opacity-50"
-                      >
-                        {lengths.map((len) => (
-                          <option key={len} value={len}>
-                            {len}
-                          </option>
-                        ))}
-                      </select>
-                    </div> */}
-
-                    {/* Additional Notes
-                    <div className="md:col-span-2">
-                      <label className="mb-[6px] block text-[12px] font-medium text-[#111111]">
-                        Additional Notes (Optional)
-                      </label>
-                      <input
-                        type="text"
-                        disabled={generating}
-                        placeholder="Any specific instructions for the AI..."
-                        className="h-[36px] w-full rounded-[6px] border border-[#E5E7EB] bg-[#F8F8F6] px-[10px] text-[12px] text-[#111111] outline-none placeholder:text-[#6B7280] focus:border-[#FACC15] focus:ring-1 focus:ring-[#FACC15] disabled:opacity-50"
-                      />
-                    </div>*/}
                   </div>
 
                   {/* Generate Button */}
@@ -1393,15 +1399,15 @@ const CreateProduct = () => {
                     step.status === "completed"
                       ? "bg-green-500 text-white"
                       : step.status === "in-progress"
-                        ? "bg-[#FACC15] text-black animate-pulse"
-                        : "bg-gray-200 text-gray-400"
+                      ? "bg-[#FACC15] text-black animate-pulse"
+                      : "bg-gray-200 text-gray-400"
                   }`}
                 >
                   {step.status === "completed"
                     ? "✓"
                     : step.status === "in-progress"
-                      ? "..."
-                      : ""}
+                    ? "..."
+                    : ""}
                 </span>
                 <span
                   className={`${step.status === "completed" ? "text-gray-600" : step.status === "in-progress" ? "text-[#FACC15] font-medium" : "text-gray-400"}`}
