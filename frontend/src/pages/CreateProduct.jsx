@@ -885,27 +885,40 @@ const CreateProduct = () => {
 
   if (showLoader) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0a0a0a]/60 backdrop-blur-2xl">
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-[#FACC15]/10 rounded-full blur-[120px]" />
-        </div>
+           <div className="fixed inset-0 z-50 flex items-center justify-center bg-transparent">
+        {/* Glassy Blur Background - Only blur, no dark overlay */}
+        <div className="absolute inset-0 backdrop-blur-md" />
 
-        <div className="relative flex flex-col items-center gap-10">
-          <div className="relative bg-gradient-to-r from-[#FACC15] to-[#e5b800] text-[#111111] px-6 py-2.5 rounded-full text-xs font-bold tracking-[0.15em] shadow-[0_8px_30px_rgba(250,204,21,0.35)] flex items-center gap-3 border border-white/40">
+        {/* Glass Card Container */}
+        <div className="relative flex flex-col items-center gap-8 p-10 rounded-3xl bg-white/10 backdrop-blur-xl border border-white/20 shadow-2xl shadow-[#FACC15]/10">
+          {/* Glass shine effect */}
+          <div className="absolute inset-0 rounded-3xl bg-gradient-to-br from-white/5 to-transparent pointer-events-none" />
+
+          {/* AI Badge */}
+          <div className="relative bg-gradient-to-r from-[#FACC15] to-[#e5b800] text-[#111111] px-6 py-2.5 rounded-full text-xs font-bold tracking-[0.15em] shadow-[0_8px_30px_rgba(250,204,21,0.35)] flex items-center gap-3 border border-white/40 z-10">
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#111111] opacity-60"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-[#111111]"></span>
             </span>
-            {isDemoMode ? 'GENERATING' : 'AI GENERATING'}
+            {isDemoMode ? "GENERATING" : "AI GENERATING"}
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#111111] opacity-60"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-[#111111]"></span>
             </span>
           </div>
 
-          <div className="relative w-24 h-24 flex items-center justify-center">
-            <div className="absolute inset-0 border border-[#FACC15]/20 rounded-full animate-ping" style={{ animationDuration: "2s" }}></div>
-            <div className="absolute inset-2 border-2 border-white/5 rounded-full"></div>
+          {/* Loader */}
+          <div className="relative w-24 h-24 flex items-center justify-center z-10">
+            {/* Outer glass ring */}
+            <div
+              className="absolute inset-0 rounded-full bg-white/10 border border-white/20 animate-ping"
+              style={{ animationDuration: "2s" }}
+            ></div>
+
+            {/* Static glass track */}
+            <div className="absolute inset-2 rounded-full bg-white/10 border border-white/20"></div>
+
+            {/* Primary spinner */}
             <div
               className="absolute inset-2 rounded-full animate-spin"
               style={{
@@ -917,6 +930,8 @@ const CreateProduct = () => {
                 mask: "radial-gradient(farthest-side, transparent calc(100% - 3px), black calc(100% - 3px))",
               }}
             ></div>
+
+            {/* Secondary counter-spinner */}
             <div
               className="absolute inset-5 rounded-full animate-spin opacity-40"
               style={{
@@ -929,7 +944,9 @@ const CreateProduct = () => {
                 mask: "radial-gradient(farthest-side, transparent calc(100% - 2px), black calc(100% - 2px))",
               }}
             ></div>
-            <div className="relative z-10 w-9 h-9 flex items-center justify-center">
+
+            {/* Center icon */}
+            <div className="relative z-10 w-9 h-9 flex items-center justify-center rounded-full bg-white/10 backdrop-blur-sm border border-white/20">
               <svg viewBox="0 0 24 24" fill="none" className="w-full h-full">
                 <path
                   d="M12 2L14.2 9.2L21 12L14.2 14.8L12 22L9.8 14.8L3 12L9.8 9.2L12 2Z"
@@ -941,19 +958,30 @@ const CreateProduct = () => {
             </div>
           </div>
 
-          <div className="flex flex-col items-center gap-2">
-            <p className="text-white/90 text-sm font-medium tracking-wide">
-              {isDemoMode ? 'Generating demo product...' : 'Crafting your result'}
+          {/* Status Text */}
+          <div className="flex flex-col items-center gap-2 z-10">
+            <p className="text-dark font-semibold text-sm tracking-wide drop-shadow-lg">
+              {isDemoMode
+                ? "Generating product..."
+                : "Crafting your result"}
             </p>
             <div className="flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#FACC15] animate-bounce" style={{ animationDelay: "0ms" }}></span>
-              <span className="w-1.5 h-1.5 rounded-full bg-[#FACC15] animate-bounce" style={{ animationDelay: "150ms" }}></span>
-              <span className="w-1.5 h-1.5 rounded-full bg-[#FACC15] animate-bounce" style={{ animationDelay: "300ms" }}></span>
+              <span
+                className="w-1.5 h-1.5 rounded-full bg-[#FACC15] animate-bounce"
+                style={{ animationDelay: "0ms" }}
+              ></span>
+              <span
+                className="w-1.5 h-1.5 rounded-full bg-[#FACC15] animate-bounce"
+                style={{ animationDelay: "150ms" }}
+              ></span>
+              <span
+                className="w-1.5 h-1.5 rounded-full bg-[#FACC15] animate-bounce"
+                style={{ animationDelay: "300ms" }}
+              ></span>
             </div>
           </div>
         </div>
-      </div>
-    );
+      </div>    );
   }
 
   // ================================================================
