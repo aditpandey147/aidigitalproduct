@@ -236,7 +236,7 @@ const Subscription = () => {
                 </p>
               </div>
               <button
-                onClick={() => navigate("/upgrades")}
+                onClick={() => navigate("https://www.aidigitalproduct.live/upgrades")}
                 className="hidden sm:inline-flex items-center gap-2 text-sm font-semibold text-[#111827] bg-white border border-[#E5E7EB] px-4 py-2.5 rounded-xl hover:border-[#FACC15]/50 hover:shadow-sm transition-all"
               >
                 <Layers size={15} className="text-[#B45309]" />
