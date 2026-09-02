@@ -230,7 +230,7 @@ const Sidebar = () => {
       show: true,
       target: "_blank",
       external: true,
-      href: "https://getcomplyzo.com/upgrades",
+      href: "https://www.aidigitalproduct.live/upgrades",
     },
     {
       path: "/support",
