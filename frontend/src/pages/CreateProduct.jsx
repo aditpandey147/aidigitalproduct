@@ -15,6 +15,8 @@ import {
   ListChecks,
   MoreHorizontal,
   Sparkles,
+  Eye,
+  Image,
 } from "lucide-react";
 
 // ================================================================
@@ -127,7 +129,7 @@ function FlameIcon({ size = 28, className = "" }) {
 }
 
 // ================================================================
-// ✅ PRODUCT TYPES - DEFINED BEFORE COMPONENT
+// PRODUCT TYPES
 // ================================================================
 
 const productTypes = [
@@ -250,6 +252,23 @@ const examples = [
 ];
 
 // ================================================================
+// ✅ DEMO FILES - Store your demo files here
+// ================================================================
+
+const DEMO_FILES = {
+  pdf: "/assets/generated/sample-product.pdf",
+  cover: "/assets/generated/cover.png",
+  mockups: [
+    { path: "/assets/generated/mockup-1.png", type: "mockup_1" },
+    { path: "/assets/generated/mockup-2.png", type: "mockup_2" },
+  ],
+  posters: [
+    { path: "/assets/generated/poster-1.png", type: "poster_1" },
+    { path: "/assets/generated/poster-2.png", type: "poster_2" },
+  ],
+};
+
+// ================================================================
 // MAIN COMPONENT
 // ================================================================
 
@@ -258,7 +277,10 @@ const CreateProduct = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // ✅ Get product data from navigation state (supports both formats)
+  // ✅ Check if Demo Mode is enabled
+  const isDemoMode = import.meta.env.VITE_DEMO_MODE === 'true';
+
+  // Get product data from navigation state
   const productDataFromNav = location.state?.topicData || location.state?.productData || null;
   const fromTopicFinder = location.state?.fromTopicFinder || false;
 
@@ -270,7 +292,7 @@ const CreateProduct = () => {
   const [showLoader, setShowLoader] = useState(false);
   const [loaderStep, setLoaderStep] = useState(0);
 
-  // Track if generation is in progress (prevents multiple generations)
+  // Track if generation is in progress
   const isGeneratingRef = useRef(false);
 
   // Track progress for live updates
@@ -292,9 +314,12 @@ const CreateProduct = () => {
   const [showProgressBox, setShowProgressBox] = useState(false);
   const [generationComplete, setGenerationComplete] = useState(false);
 
-  // ✅ Initialize form data with product data from navigation
+  // ✅ Demo mode states
+  const [demoProgress, setDemoProgress] = useState(0);
+  const [demoComplete, setDemoComplete] = useState(false);
+
+  // Initialize form data
   const [formData, setFormData] = useState(() => {
-    // Check if we have data from Topic Finder
     if (productDataFromNav) {
       return {
         productType: productDataFromNav.productType || "",
@@ -316,7 +341,6 @@ const CreateProduct = () => {
         marketing: null,
         coverImage: productDataFromNav.coverImage || null,
         pdfPath: null,
-        // ✅ Additional fields from Topic Finder
         keywords: productDataFromNav.keywords || [],
         estimatedSales: productDataFromNav.estimatedSales || "",
         difficulty: productDataFromNav.difficulty || "Medium",
@@ -372,28 +396,20 @@ const CreateProduct = () => {
     currentStepLabel: "",
   });
 
-  // ✅ productTypes is now defined, so this works
   const selectedType = productTypes.find((t) => t.id === formData.productType);
 
-  // ✅ Show toast when data is auto-filled from Topic Finder
+  // Show toast when data is auto-filled
   useEffect(() => {
     if (productDataFromNav && fromTopicFinder) {
-      toast.success(
-        `📋 Topic "${productDataFromNav.title}" loaded! Edit and generate.`,
-        { duration: 4000 }
-      );
+      toast.success(`📋 Topic "${productDataFromNav.title}" loaded! Edit and generate.`, { duration: 4000 });
       console.log("📦 Auto-filled from Topic Finder:", productDataFromNav);
     } else if (productDataFromNav) {
-      toast.success(
-        `📋 "${productDataFromNav.title}" loaded! Edit and generate.`,
-        { duration: 3000 }
-      );
+      toast.success(`📋 "${productDataFromNav.title}" loaded! Edit and generate.`, { duration: 3000 });
       console.log("📦 Auto-filled from product data:", productDataFromNav);
     }
   }, [productDataFromNav, fromTopicFinder]);
 
   useEffect(() => {
-    // Check if there's a generation in progress from localStorage
     const storedProductId = localStorage.getItem("generatingProductId");
     const storedProgress = localStorage.getItem("generationProgress");
 
@@ -406,8 +422,6 @@ const CreateProduct = () => {
         setGenerating(true);
         setGenerationComplete(false);
         isGeneratingRef.current = true;
-
-        // Resume polling
         pollGenerationProgress(storedProductId);
       } catch (e) {
         console.error("Failed to restore progress:", e);
@@ -429,7 +443,6 @@ const CreateProduct = () => {
     }
   }, [productId, liveProgress, showProgressBox]);
 
-  // Loader animation steps
   const loaderSteps = [
     "🔄 Initializing AI Engine...",
     "📋 Gathering product details...",
@@ -472,6 +485,106 @@ const CreateProduct = () => {
     });
   };
 
+  // ✅ Demo Mode: Simulate Generation with Progress
+  const simulateDemoGeneration = () => {
+    setGenerating(true);
+    setDemoProgress(0);
+    setDemoComplete(false);
+    setCurrentStep(2);
+    setShowProgressBox(true);
+
+    const steps = [
+      { progress: 10, label: "Analyzing your idea..." },
+      { progress: 25, label: "Creating outline..." },
+      { progress: 45, label: "Writing content..." },
+      { progress: 60, label: "Generating cover image..." },
+      { progress: 75, label: "Creating mockups..." },
+      { progress: 90, label: "Preparing posters..." },
+      { progress: 100, label: "✅ Complete!" },
+    ];
+
+    let currentIndex = 0;
+
+    // Update live progress
+    setLiveProgress({
+      percentage: 0,
+      currentStepLabel: "Starting demo generation...",
+      steps: liveProgress.steps.map((s) => ({ ...s, status: "pending" })),
+    });
+
+    const interval = setInterval(() => {
+      currentIndex++;
+      if (currentIndex < steps.length) {
+        const step = steps[currentIndex];
+        setDemoProgress(step.progress);
+        
+        // Update live progress
+        setLiveProgress((prev) => ({
+          ...prev,
+          percentage: step.progress,
+          currentStepLabel: step.label,
+          steps: prev.steps.map((s, i) => ({
+            ...s,
+            status: i < currentIndex ? "completed" : i === currentIndex ? "in-progress" : "pending",
+          })),
+        }));
+
+        toast.loading(step.label, { id: 'demo-progress' });
+      }
+      
+      if (currentIndex >= steps.length - 1) {
+        clearInterval(interval);
+        setGenerating(false);
+        setDemoComplete(true);
+        setGenerationComplete(true);
+        setCurrentStep(3);
+        
+        // Update formData with demo files
+        setFormData((prev) => ({
+          ...prev,
+          pdfPath: DEMO_FILES.pdf,
+          coverImage: DEMO_FILES.cover,
+        }));
+
+        // Update live progress to complete
+        setLiveProgress({
+          percentage: 100,
+          currentStepLabel: "✅ Demo Complete!",
+          steps: liveProgress.steps.map((s) => ({ ...s, status: "completed" })),
+        });
+
+        toast.success('✅ Demo product generated successfully!', { id: 'demo-progress' });
+        
+        setTimeout(() => {
+          setShowProgressBox(false);
+        }, 3000);
+      }
+    }, 1200);
+  };
+
+  // ✅ View All Demo Files
+  const openAllDemoFiles = () => {
+    const files = [
+      { url: DEMO_FILES.pdf, name: 'PDF' },
+      { url: DEMO_FILES.cover, name: 'Cover' },
+      ...DEMO_FILES.mockups.map(m => ({ url: m.path, name: 'Mockup' })),
+      ...DEMO_FILES.posters.map(p => ({ url: p.path, name: 'Poster' })),
+    ];
+
+    const validFiles = files.filter(f => f.url);
+    
+    validFiles.forEach((file, index) => {
+      setTimeout(() => {
+        const fullUrl = file.url.startsWith('http') 
+          ? file.url 
+          : `${window.location.origin}${file.url}`;
+        window.open(fullUrl, '_blank');
+      }, index * 300);
+    });
+
+    toast.success(`Opening ${validFiles.length} files... Please allow popups.`);
+  };
+
   const pollGenerationProgress = (productId) => {
     if (pollingInterval) {
       clearInterval(pollingInterval);
@@ -487,9 +600,6 @@ const CreateProduct = () => {
         const data = response.data?.data || response.data;
 
         console.log("📊 Progress data:", data);
-        console.log(
-          `📊 Progress: ${data.progress}% - ${data.currentStepLabel}`
-        );
 
         if (data.status === "completed") {
           clearInterval(interval);
@@ -498,7 +608,6 @@ const CreateProduct = () => {
           isGeneratingRef.current = false;
           setGenerating(false);
 
-          // Update all progress states to 100%
           setProgress({
             currentStep: 6,
             totalSteps: 7,
@@ -529,7 +638,6 @@ const CreateProduct = () => {
             ],
           });
 
-          // Fetch full product data
           const productRes = await api.get(`/products/${productId}`);
           const productData = productRes.data?.data || productRes.data;
           setFormData((prev) => ({
@@ -563,7 +671,6 @@ const CreateProduct = () => {
           localStorage.removeItem("generatingProductId");
           localStorage.removeItem("generationProgress");
         } else {
-          // Update progress based on data from backend
           const progressVal = data.progress || 0;
           const stepLabels = [
             "Understanding your idea",
@@ -580,7 +687,6 @@ const CreateProduct = () => {
             stepLabels.length - 1
           );
 
-          // Update progress state
           setProgress((prev) => {
             const updatedSteps = prev.steps.map((s, i) => ({
               ...s,
@@ -600,7 +706,6 @@ const CreateProduct = () => {
             };
           });
 
-          // Update live progress for the box
           const updatedSteps = liveProgress.steps.map((s, i) => ({
             ...s,
             status:
@@ -616,10 +721,6 @@ const CreateProduct = () => {
             currentStepLabel: stepLabels[currentStepIndex] || "Processing...",
             steps: updatedSteps,
           });
-
-          console.log(
-            `📊 Progress updated: ${progressVal}% - ${stepLabels[currentStepIndex]}`
-          );
         }
       } catch (error) {
         console.error("Polling error:", error);
@@ -629,7 +730,7 @@ const CreateProduct = () => {
     setPollingInterval(interval);
   };
 
-  // Handle generate with live progress
+  // Handle generate with demo mode support
   const handleGenerateAll = async () => {
     if (isGeneratingRef.current) {
       toast.error("⏳ Generation already in progress. Please wait.");
@@ -653,6 +754,13 @@ const CreateProduct = () => {
       return;
     }
 
+    // ✅ If Demo Mode is enabled, simulate generation
+    if (isDemoMode) {
+      await runLoaderAnimation();
+      simulateDemoGeneration();
+      return;
+    }
+
     const token = localStorage.getItem("token");
     if (!token) {
       toast.error("Please login first");
@@ -660,7 +768,6 @@ const CreateProduct = () => {
       return;
     }
 
-    // Show loader animation
     await runLoaderAnimation();
 
     isGeneratingRef.current = true;
@@ -736,6 +843,11 @@ const CreateProduct = () => {
 
   // Download PDF function
   const downloadPDF = async () => {
+    if (isDemoMode) {
+      window.open(`${window.location.origin}${DEMO_FILES.pdf}`, '_blank');
+      return;
+    }
+
     if (!productId) {
       toast.error("No product found to download");
       return;
@@ -774,38 +886,26 @@ const CreateProduct = () => {
   if (showLoader) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0a0a0a]/60 backdrop-blur-2xl">
-        {/* ===== AMBIENT GLOW ===== */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-[#FACC15]/10 rounded-full blur-[120px]" />
         </div>
 
-        {/* ===== CONTENT ===== */}
         <div className="relative flex flex-col items-center gap-10">
-          {/* ===== AI BADGE ===== */}
           <div className="relative bg-gradient-to-r from-[#FACC15] to-[#e5b800] text-[#111111] px-6 py-2.5 rounded-full text-xs font-bold tracking-[0.15em] shadow-[0_8px_30px_rgba(250,204,21,0.35)] flex items-center gap-3 border border-white/40">
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#111111] opacity-60"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-[#111111]"></span>
             </span>
-            AI GENERATING
+            {isDemoMode ? 'GENERATING' : 'AI GENERATING'}
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#111111] opacity-60"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-[#111111]"></span>
             </span>
           </div>
 
-          {/* ===== LOADER ===== */}
           <div className="relative w-24 h-24 flex items-center justify-center">
-            {/* outer pulse ring */}
-            <div
-              className="absolute inset-0 border border-[#FACC15]/20 rounded-full animate-ping"
-              style={{ animationDuration: "2s" }}
-            ></div>
-
-            {/* static track */}
+            <div className="absolute inset-0 border border-[#FACC15]/20 rounded-full animate-ping" style={{ animationDuration: "2s" }}></div>
             <div className="absolute inset-2 border-2 border-white/5 rounded-full"></div>
-
-            {/* primary spinner */}
             <div
               className="absolute inset-2 rounded-full animate-spin"
               style={{
@@ -817,8 +917,6 @@ const CreateProduct = () => {
                 mask: "radial-gradient(farthest-side, transparent calc(100% - 3px), black calc(100% - 3px))",
               }}
             ></div>
-
-            {/* secondary counter-spinner for depth */}
             <div
               className="absolute inset-5 rounded-full animate-spin opacity-40"
               style={{
@@ -831,8 +929,6 @@ const CreateProduct = () => {
                 mask: "radial-gradient(farthest-side, transparent calc(100% - 2px), black calc(100% - 2px))",
               }}
             ></div>
-
-            {/* center icon */}
             <div className="relative z-10 w-9 h-9 flex items-center justify-center">
               <svg viewBox="0 0 24 24" fill="none" className="w-full h-full">
                 <path
@@ -845,24 +941,14 @@ const CreateProduct = () => {
             </div>
           </div>
 
-          {/* ===== STATUS TEXT ===== */}
           <div className="flex flex-col items-center gap-2">
             <p className="text-white/90 text-sm font-medium tracking-wide">
-              Crafting your result
+              {isDemoMode ? 'Generating demo product...' : 'Crafting your result'}
             </p>
             <div className="flex items-center gap-1.5">
-              <span
-                className="w-1.5 h-1.5 rounded-full bg-[#FACC15] animate-bounce"
-                style={{ animationDelay: "0ms" }}
-              ></span>
-              <span
-                className="w-1.5 h-1.5 rounded-full bg-[#FACC15] animate-bounce"
-                style={{ animationDelay: "150ms" }}
-              ></span>
-              <span
-                className="w-1.5 h-1.5 rounded-full bg-[#FACC15] animate-bounce"
-                style={{ animationDelay: "300ms" }}
-              ></span>
+              <span className="w-1.5 h-1.5 rounded-full bg-[#FACC15] animate-bounce" style={{ animationDelay: "0ms" }}></span>
+              <span className="w-1.5 h-1.5 rounded-full bg-[#FACC15] animate-bounce" style={{ animationDelay: "150ms" }}></span>
+              <span className="w-1.5 h-1.5 rounded-full bg-[#FACC15] animate-bounce" style={{ animationDelay: "300ms" }}></span>
             </div>
           </div>
         </div>
@@ -871,32 +957,23 @@ const CreateProduct = () => {
   }
 
   // ================================================================
-  // COMPLETION SCREEN
+  // COMPLETION SCREEN (with Demo Mode support)
   // ================================================================
 
   if (currentStep === 3) {
     return (
       <div className="flex h-screen bg-[#F8F8F6]">
         <Sidebar />
-        <div className="flex-1 ml-0 md:ml-[264px] flex flex-col overflow-hidden">
+        <div className="flex-1 ml-0 md:ml-[18rem] flex flex-col overflow-hidden">
           <Navbar />
           <main className="flex-1 overflow-y-auto p-6 flex items-center justify-center">
             <div className="relative bg-white rounded-3xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.15)] border border-[#ECECE9] p-12 text-center max-w-md mx-auto overflow-hidden">
-              {/* ambient glow behind the icon */}
+        
               <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-64 bg-green-500/10 rounded-full blur-[80px] pointer-events-none"></div>
 
-              {/* ===== Animated Success Icon ===== */}
               <div className="relative w-28 h-28 mx-auto mb-8">
-                {/* soft outer ring pulse */}
-                <div
-                  className="absolute inset-0 bg-green-500/20 rounded-full animate-ping opacity-60"
-                  style={{ animationDuration: "2s" }}
-                ></div>
-
-                {/* static ring for depth */}
+                <div className="absolute inset-0 bg-green-500/20 rounded-full animate-ping opacity-60" style={{ animationDuration: "2s" }}></div>
                 <div className="absolute -inset-2 rounded-full border border-green-500/15"></div>
-
-                {/* main circle with gradient instead of flat fill */}
                 <div className="relative z-10 w-28 h-28 bg-gradient-to-b from-green-400 to-green-600 rounded-full flex items-center justify-center shadow-[0_10px_30px_-5px_rgba(34,197,94,0.5)] transition-transform duration-500 hover:scale-105">
                   <svg
                     className="w-14 h-14 text-white"
@@ -919,26 +996,80 @@ const CreateProduct = () => {
                 </div>
               </div>
 
-              {/* ===== Copy ===== */}
               <h2 className="text-2xl font-semibold text-[#111111] mb-2 tracking-tight">
-                Success
+                {isDemoMode ? 'Product Ready!' : 'Success'}
               </h2>
-              <p className="text-[#6B7280] text-[15px] leading-relaxed mb-8">
-                Your product has been generated successfully and is ready to
-                view.
+              <p className="text-[#6B7280] text-[15px] leading-relaxed mb-4">
+                {isDemoMode 
+                  ? 'Your product has been generated successfully. Click below to view all files.'
+                  : 'Your product has been generated successfully and is ready to view.'
+                }
               </p>
 
-              {/* ===== Action ===== */}
-              <button className="w-full bg-[#111111] text-white font-medium text-sm py-3 rounded-xl hover:bg-[#222222] transition-colors duration-200 shadow-sm">
-                View product
-              </button>
-            </div>
 
-            <style>{`
-        @keyframes draw-check {
-          to { stroke-dashoffset: 0; }
-        }
-      `}</style>
+              {/* View Product Button */}
+              <button
+                onClick={isDemoMode ? openAllDemoFiles : downloadPDF}
+                className="w-full bg-[#111111] text-white font-medium text-sm py-3 rounded-xl hover:bg-[#222222] transition-colors duration-200 shadow-sm flex items-center justify-center gap-2"
+              >
+                {isDemoMode ? (
+                  <>
+                    <Eye className="w-4 h-4" />
+                    View All Files ({1 + 1 + DEMO_FILES.mockups.length + DEMO_FILES.posters.length})
+                  </>
+                ) : (
+                  <>
+                    <Download className="w-4 h-4" />
+                    Download PDF
+                  </>
+                )}
+              </button>
+
+              {isDemoMode && (
+                <div className="mt-3 flex flex-wrap gap-2 justify-center">
+                  <button
+                    onClick={() => window.open(`${window.location.origin}${DEMO_FILES.pdf}`, '_blank')}
+                    className="px-3 py-1.5 bg-gray-100 text-gray-700 text-xs font-medium rounded-lg hover:bg-gray-200 transition flex items-center gap-1"
+                  >
+                    <FileText className="w-3 h-3" />
+                    PDF
+                  </button>
+                  <button
+                    onClick={() => window.open(`${window.location.origin}${DEMO_FILES.cover}`, '_blank')}
+                    className="px-3 py-1.5 bg-gray-100 text-gray-700 text-xs font-medium rounded-lg hover:bg-gray-200 transition flex items-center gap-1"
+                  >
+                    <Image className="w-3 h-3" />
+                    Cover
+                  </button>
+                  {DEMO_FILES.mockups.map((m, i) => (
+                    <button
+                      key={i}
+                      onClick={() => window.open(`${window.location.origin}${m.path}`, '_blank')}
+                      className="px-3 py-1.5 bg-gray-100 text-gray-700 text-xs font-medium rounded-lg hover:bg-gray-200 transition flex items-center gap-1"
+                    >
+                      <Image className="w-3 h-3" />
+                      Mockup {i + 1}
+                    </button>
+                  ))}
+                  {DEMO_FILES.posters.map((p, i) => (
+                    <button
+                      key={i}
+                      onClick={() => window.open(`${window.location.origin}${p.path}`, '_blank')}
+                      className="px-3 py-1.5 bg-gray-100 text-gray-700 text-xs font-medium rounded-lg hover:bg-gray-200 transition flex items-center gap-1"
+                    >
+                      <Image className="w-3 h-3" />
+                      Poster {i + 1}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              <style>{`
+                @keyframes draw-check {
+                  to { stroke-dashoffset: 0; }
+                }
+              `}</style>
+            </div>
           </main>
         </div>
       </div>
@@ -1062,11 +1193,9 @@ const CreateProduct = () => {
                   </p>
 
                   <div className="mt-[17px] grid grid-cols-1 md:grid-cols-2 gap-x-[21px] gap-y-[13px]">
-                    {/* Product Title */}
                     <div className="md:col-span-2">
                       <label className="mb-[6px] block text-[12px] font-medium text-[#111111]">
-                        Product Title / Idea{" "}
-                        <span className="text-red-500">*</span>
+                        Product Title / Idea <span className="text-red-500">*</span>
                       </label>
                       <input
                         type="text"
@@ -1079,7 +1208,6 @@ const CreateProduct = () => {
                       />
                     </div>
 
-                    {/* Niche */}
                     <div>
                       <label className="mb-[6px] block text-[12px] font-medium text-[#111111]">
                         Niche / Category <span className="text-red-500">*</span>
@@ -1095,7 +1223,6 @@ const CreateProduct = () => {
                       />
                     </div>
 
-                    {/* Target Audience */}
                     <div>
                       <label className="mb-[6px] block text-[12px] font-medium text-[#111111]">
                         Target Audience <span className="text-red-500">*</span>
@@ -1111,7 +1238,6 @@ const CreateProduct = () => {
                       />
                     </div>
 
-                    {/* Main Problem */}
                     <div>
                       <label className="mb-[6px] block text-[12px] font-medium text-[#111111]">
                         Main Problem <span className="text-red-500">*</span>
@@ -1127,7 +1253,6 @@ const CreateProduct = () => {
                       />
                     </div>
 
-                    {/* Desired Outcome */}
                     <div>
                       <label className="mb-[6px] block text-[12px] font-medium text-[#111111]">
                         Desired Outcome <span className="text-red-500">*</span>
@@ -1143,7 +1268,6 @@ const CreateProduct = () => {
                       />
                     </div>
 
-                    {/* Tone */}
                     <div>
                       <label className="mb-[6px] block text-[12px] font-medium text-[#111111]">
                         Tone
@@ -1163,7 +1287,6 @@ const CreateProduct = () => {
                       </select>
                     </div>
 
-                    {/* Author Name */}
                     <div>
                       <label className="mb-[6px] block text-[12px] font-medium text-[#111111]">
                         Author Name
@@ -1179,7 +1302,6 @@ const CreateProduct = () => {
                       />
                     </div>
 
-                    {/* Brand Name */}
                     <div>
                       <label className="mb-[6px] block text-[12px] font-medium text-[#111111]">
                         Brand Name
@@ -1196,7 +1318,6 @@ const CreateProduct = () => {
                     </div>
                   </div>
 
-                  {/* Generate Button */}
                   <div className="mt-[9px] flex justify-end border-t border-[#E5E7EB] pt-[15px]">
                     <button
                       onClick={handleGenerateAll}
@@ -1254,8 +1375,7 @@ const CreateProduct = () => {
                 <section className="rounded-[11px] border border-[#E5E7EB] bg-white px-[18px] py-[17px] shadow-sm">
                   <div className="flex items-center justify-between">
                     <h2 className="flex items-center text-[15px] font-bold text-[#111111]">
-                      <span className="mr-[8px]">📚</span>
-                      Example Ideas
+                      <span className="mr-[8px]">📚</span> Example Ideas
                     </h2>
                     <button className="text-[12px] font-medium text-[#FACC15] hover:text-[#e5b800]">
                       View all
@@ -1367,7 +1487,7 @@ const CreateProduct = () => {
               </span>
             </div>
             <span className="text-sm font-bold text-[#FACC15]">
-              {Math.round(liveProgress.percentage)}%
+              {isDemoMode ? demoProgress : Math.round(liveProgress.percentage)}%
             </span>
           </div>
 
@@ -1379,7 +1499,7 @@ const CreateProduct = () => {
                   ? "bg-green-500"
                   : "bg-gradient-to-r from-[#FACC15] to-[#e5b800]"
               }`}
-              style={{ width: `${Math.min(liveProgress.percentage, 100)}%` }}
+              style={{ width: `${isDemoMode ? demoProgress : Math.min(liveProgress.percentage, 100)}%` }}
             />
           </div>
 
@@ -1387,6 +1507,8 @@ const CreateProduct = () => {
           <p className="text-xs text-[#6B7280] mt-2.5 text-center truncate">
             {generationComplete
               ? "✅ Product ready! Download now."
+              : isDemoMode
+              ? liveProgress.currentStepLabel || "⏳ Generating demo..."
               : liveProgress.currentStepLabel || "⏳ AI is working..."}
           </p>
 
