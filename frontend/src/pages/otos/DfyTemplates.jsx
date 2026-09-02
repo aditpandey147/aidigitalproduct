@@ -5,6 +5,7 @@ import { useAuth } from "../../context/AuthContext";
 import Sidebar from "../../components/Sidebar";
 import Navbar from "../../components/Navbar";
 import api from "../../services/api";
+import templateBg from "../../assets/images/dfy-banner.png";
 import toast from "react-hot-toast";
 import {
   Search,
@@ -217,133 +218,65 @@ export default function DfyTemplates() {
         <Navbar />
         <main className="flex-1 p-4 md:p-6 overflow-y-auto">
           <div className="max-w-full mx-auto">
-            {/* ===== BANNER - ENHANCED (Black Theme) ===== */}
-
             {/* ===== 2-COLUMN LAYOUT ===== */}
             <div className="flex flex-col lg:flex-row gap-6">
               {/* ===== LEFT COLUMN - Templates (70%) ===== */}
               <div className="flex-1 min-w-0">
-                <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#111827] via-[#1a2332] to-[#0d1117] p-6 md:p-8 mb-6 shadow-xl border border-gray-800/50">
-                  {/* Background Decorations */}
-                  <div className="absolute top-0 right-0 w-72 h-72 bg-[#FACC15]/5 rounded-full blur-3xl -mr-24 -mt-24"></div>
-                  <div className="absolute bottom-0 left-0 w-56 h-56 bg-[#FACC15]/5 rounded-full blur-3xl -ml-20 -mb-20"></div>
-                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-[#FACC15]/3 rounded-full blur-3xl"></div>
-
-                  {/* Grid Pattern Overlay */}
-                  <div className="absolute inset-0 opacity-[0.02] bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgdmlld0JveD0iMCAwIDQwIDQwIj48cGF0aCBkPSJNMCAwaDQwdjQwSDB6IiBmaWxsPSJub25lIiBzdHJva2U9IiNmZmZmZmYiIHN0cm9rZS13aWR0aD0iMC41Ii8+PC9zdmc+')]"></div>
-
-                  {/* Floating Icons - Decorative */}
-                  <div className="absolute top-4 left-10 text-[#FACC15] text-2xl opacity-10 animate-float">
-                    ✦
-                  </div>
-                  <div
-                    className="absolute bottom-4 right-12 text-[#FACC15] text-xl opacity-10 animate-float"
-                    style={{ animationDelay: "1.5s" }}
-                  >
-                    ✦
+                {/* ===== DFY TEMPLATES BANNER (Topic Finder Style) ===== */}
+                <div className="relative overflow-hidden rounded-2xl mb-6 shadow-xl border border-gray-800/50 bg-[#111827]">
+                  {/* Right-side image with gradient overlay */}
+                  <div className="absolute inset-y-0 right-0 w-1/2 md:w-2/5">
+                    <div
+                      className="absolute inset-0 bg-cover bg-right"
+                      style={{ backgroundImage: `url(${templateBg})` }}
+                    ></div>
+                    <div className="absolute inset-0 bg-gradient-to-r from-[#111827] via-[#111827]/70 to-transparent"></div>
                   </div>
 
-                  <div className="relative flex flex-col md:flex-row items-center justify-between gap-4 z-10">
-                    {/* Left Content */}
-                    <div className="flex items-center gap-5">
-                      {/* Animated Icon Container */}
-                      <div className="relative">
-                        <div className="absolute inset-0 bg-[#FACC15]/10 rounded-2xl blur-xl animate-pulse"></div>
-                        <div className="relative w-16 h-16 bg-[#FACC15]/10 rounded-2xl flex items-center justify-center flex-shrink-0 backdrop-blur-sm border border-[#FACC15]/20 shadow-lg shadow-[#FACC15]/5">
-                          <Rocket
-                            size={34}
-                            className="text-[#FACC15] animate-bounce-slow"
-                          />
-                        </div>
-                      </div>
+                  {/* Glow accent */}
+                  <div className="absolute -top-10 -left-10 w-64 h-64 bg-[#FACC15]/10 rounded-full blur-[90px] pointer-events-none"></div>
 
-                      <div>
-                        <div className="flex items-center gap-3 flex-wrap">
-                          <h2 className="text-2xl md:text-3xl font-extrabold text-white tracking-tight">
-                            Ready-to-Use Sales Page Templates
-                          </h2>
-                          <span className="px-3 py-1 bg-[#FACC15]/20 text-[#FACC15] text-[10px] font-bold rounded-full border border-[#FACC15]/30 backdrop-blur-sm">
-                            NEW 🔥
-                          </span>
-                        </div>
-                        <p className="text-gray-400 text-sm max-w-lg mt-1 leading-relaxed">
-                          Download, customize, and launch your high-converting
-                          sales page in minutes.
-                          <span className="hidden sm:inline">
-                            {" "}
-                            No design skills needed.
-                          </span>
-                        </p>
-                      </div>
+                  {/* Content */}
+                  <div className="relative z-10 max-w-[650px] p-6 md:p-8 lg:p-10">
+                    {/* Badge */}
+                    <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-[#ffd21f]/40 bg-[#ffd21f]/15 px-3 py-1 text-[11px] font-bold text-[#ffd21f]">
+                      <i className="fa-solid fa-wand-magic-sparkles"></i>{" "}
+                      READY-TO-USE TEMPLATES
                     </div>
 
-                    {/* Right Content - Badges */}
-                    <div className="flex items-center gap-3 flex-shrink-0">
-                      {/* Template Count Badge */}
-                      <div className="group relative px-4 py-2 bg-white/5 backdrop-blur-sm rounded-full border border-white/10 hover:bg-white/10 transition-all duration-300 shadow-lg">
-                        <div className="flex items-center gap-2">
-                          <span className="text-[#FACC15] text-lg font-bold">
-                            {filteredTemplates.length}
-                          </span>
-                          <span className="text-gray-400 text-xs font-medium uppercase tracking-wider">
-                            Templates
-                          </span>
-                        </div>
-                        <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-[#FACC15] rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                      </div>
+                    {/* Heading */}
+                    <h1 className="text-[30px] font-black uppercase leading-[1.05] tracking-tight sm:text-[36px] text-white">
+                      LAUNCH YOUR{" "}
+                      <span className="block text-[#ffd21f]">
+                        SALES PAGE IN MINUTES
+                      </span>
+                    </h1>
 
-                      {/* FREE Badge */}
-                      <div className="relative px-5 py-2.5 bg-gradient-to-r from-[#FACC15] to-[#F59E0B] rounded-full shadow-lg shadow-[#FACC15]/20 hover:shadow-[#FACC15]/40 transition-all duration-300 group overflow-hidden">
-                        <div className="absolute inset-0 bg-gradient-to-r from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                        <div className="relative flex items-center gap-2">
-                          <span className="text-[#111827] text-sm font-bold">
-                            FREE
-                          </span>
-                          <span className="text-[#111827]/80 text-[10px] font-medium uppercase tracking-wider">
-                            Download
-                          </span>
-                        </div>
-                        {/* Shine Effect */}
-                        <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
-                      </div>
+                    {/* Description */}
+                    <p className="mt-3 max-w-[620px] text-[14px] leading-5 text-slate-300">
+                      Download, customize, and launch high-converting sales page
+                      templates. No design skills needed.
+                    </p>
 
-                      {/* Quick Action Button */}
-                      <button
-                        onClick={() => {
-                          const searchInput =
-                            document.querySelector('input[type="text"]');
-                          if (searchInput) searchInput.focus();
-                        }}
-                        className="hidden sm:flex items-center gap-1.5 px-3 py-2 bg-white/5 backdrop-blur-sm rounded-full border border-white/10 hover:bg-white/10 transition-all duration-300 text-gray-300 text-xs font-medium"
-                      >
-                        <Search size={14} />
-                        Browse Templates
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Bottom Decorative Bar */}
-                  <div className="relative mt-4 pt-4 border-t border-white/5">
-                    <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 text-gray-500 text-[11px]">
-                      <span className="flex items-center gap-1.5">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#FACC15]"></span>
-                        50+ Professional Templates
-                      </span>
-                      <span className="flex items-center gap-1.5">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#FACC15]"></span>
-                        Fully Responsive
-                      </span>
-                      <span className="flex items-center gap-1.5">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#FACC15]"></span>
-                        One-Click Download
-                      </span>
-                      <span className="flex items-center gap-1.5">
-                        <span className="w-1.5 h-1.5 rounded-full bg-[#FACC15]"></span>
-                        100% Customizable
-                      </span>
+                    {/* Tags */}
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {[
+                        ["fa-file", "50+ Templates"],
+                        ["fa-mobile-screen", "Fully Responsive"],
+                        ["fa-download", "One-Click Download"],
+                      ].map(([icon, text]) => (
+                        <span
+                          key={text}
+                          className="inline-flex items-center gap-2 rounded-full border border-slate-700 bg-slate-800/70 px-3 py-1.5 text-[10px] font-bold text-white"
+                        >
+                          <i className={`fa-solid ${icon} text-[#ffd21f]`}></i>{" "}
+                          {text}
+                        </span>
+                      ))}
                     </div>
                   </div>
                 </div>
+
                 {/* Search & Filters */}
                 <div className="bg-white rounded-xl border border-[#E5E7EB] p-4 shadow-sm mb-6">
                   <div className="flex flex-col md:flex-row gap-4">
