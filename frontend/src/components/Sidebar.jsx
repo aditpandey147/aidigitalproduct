@@ -478,10 +478,13 @@ const Sidebar = () => {
                     <i
                       className={`fas ${getPlanIcon(planName)} text-[7px] md:text-[8px] flex-shrink-0`}
                     ></i>
-                    <span className="truncate">
+                    {/* <span className="truncate">
                       {planName?.replace(/^Complyzo\s+/, "") ||
                         planName ||
                         "Free"}
+                    </span> */}
+                    <span className="truncate">
+                      AI Digital Product
                     </span>
                   </span>
                 )}
