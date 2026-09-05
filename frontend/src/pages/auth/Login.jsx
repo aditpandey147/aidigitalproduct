@@ -345,12 +345,12 @@ function LoginCard({
 
       {/* Sign Up Link */}
       <p className="mt-[20px] text-center text-[14px] text-[#5b636d]">
-        Don&apos;t have an account?{" "}
+        Need Support?{" "}
         <Link
-          to="/signup"
+          to="/support"
           className="font-semibold text-[#403ddb] hover:underline"
         >
-          Sign up for free
+         Contact Support
         </Link>
       </p>
     </div>
