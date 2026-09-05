@@ -483,7 +483,7 @@ const Sidebar = () => {
                         planName ||
                         "Free"}
                     </span> */}
-                    <span className="truncate">
+                    <span className="">
                       AI Digital Product
                     </span>
                   </span>
