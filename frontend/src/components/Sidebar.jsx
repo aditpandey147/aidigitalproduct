@@ -39,6 +39,12 @@ const Sidebar = () => {
   const dropdownRef = useRef(null);
   const sidebarRef = useRef(null);
 
+  // ✅ Check if user is reseller (has plan 13)
+  const isReseller = () => {
+    const userPlans = user?.planId || [1];
+    return userPlans.some((plan) => plan === 13);
+  };
+
   // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -86,7 +92,6 @@ const Sidebar = () => {
         setPlanLoading(true);
         const response = await api.get("/plans");
         if (response.data && response.data.length > 0) {
-          // Get the latest/highest plan
           const planIds = user.planId || [1];
           const highestPlanId = Math.max(...planIds);
           const plan = response.data.find((p) => p.planId === highestPlanId);
@@ -142,7 +147,7 @@ const Sidebar = () => {
       path: "/topic-finder",
       label: "Topic Finder",
       icon: Lightbulb,
-      show: true, // Or hasAnyPlan([7]) if you want to restrict
+      show: true,
     },
     {
       path: "/create",
@@ -157,65 +162,49 @@ const Sidebar = () => {
       show: true,
     },
     {
+      path: "/unlimited",
+      icon: Crown,
+      label: "Unlimited",
+      show: hasAnyPlan([3,4]),
+    },
+    {
       path: "/cover-design",
       label: "Cover Design",
       icon: Images,
-      show: hasAnyPlan([2]),
+      show: hasAnyPlan([5]),
     },
     {
       path: "/aiseals",
       label: "AI Seals Machine",
       icon: Sparkles,
-      show: hasAnyPlan([3]),
+      show: hasAnyPlan([6,7]),
     },
-
-    // ===== ✅ Show if user has purchased Plan 2+ =====
-    {
-      path: "/unlimited",
-      icon: Crown,
-      label: "Unlimited",
-      show: hasAnyPlan([4]),
-    },
-
-    // ===== ✅ Show if user has purchased Plan 3+ =====
-    {
-      path: "/competitor-analysis",
-      icon: ArrowRightLeft,
-      label: "Competitor Analysis",
-      show: hasAnyPlan([5]),
-    },
-
-    // ===== ✅ Show if user has purchased Plan 4+ =====
-    {
-      path: "/ai-ranker",
-      icon: ChartLine,
-      label: "AI Ranker",
-      show: hasAnyPlan([6]),
-    },
-
-    // ===== ✅ Show if user has purchased Plan 5+ =====
     {
       path: "/dfy-templates",
       label: "DFY Templates",
       icon: FolderOpen,
-      show: hasAnyPlan([7]),
+      show: hasAnyPlan([8,9]),
     },
 
-    // ===== ✅ Show ONLY if user has purchased Plan 10 =====
+    {
+      path: "/ai-ranker",
+      icon: ChartLine,
+      label: "AI Ranker",
+      show: hasAnyPlan([10]),
+    },
     {
       path: "/ai-profit-machine",
       label: "AI Profit Machine",
       icon: DollarSign,
-      show: hasPlan(8),
+      show: hasPlan(11,12),
     },
+    // ✅ RESELLER - Show for plan 13 or admin
     {
       path: "/reseller",
       label: "Reseller",
       icon: Gift,
-      show: hasAnyPlan([7]),
+      show: hasPlan(13) || isAdmin,
     },
-
-    // ===== ✅ ALL PLANS - Always show =====
     {
       path: "/training",
       icon: GraduationCap,
@@ -267,16 +256,19 @@ const Sidebar = () => {
   const getPlanColor = (planName) => {
     const planColors = {
       Free: "bg-gray-100 text-gray-600",
-      "Complyzo FE": "bg-blue-100 text-blue-600",
-      "Complyzo FE+TURBO": "bg-indigo-100 text-indigo-600",
-      "Complyzo Unlimited Silver": "bg-gray-200 text-gray-700",
-      "Complyzo Unlimited Gold": "bg-amber-100 text-amber-700",
-      "Complyzo Competitor Spy Elite": "bg-purple-100 text-purple-600",
-      "Complyzo Competitor Spy Pro": "bg-purple-200 text-purple-700",
-      "Complyzo AI Ranker": "bg-emerald-100 text-emerald-600",
-      "Complyzo DFY Silver": "bg-gray-300 text-gray-800",
-      "Complyzo DFY Gold": "bg-yellow-100 text-yellow-700",
-      "Complyzo AI Profit Machine": "bg-rose-100 text-rose-600",
+      FE: "bg-blue-100 text-blue-600",
+      "FE + TURBO": "bg-indigo-100 text-indigo-600",
+      "Unlimited Silver": "bg-gray-200 text-gray-700",
+      "Unlimited Gold": "bg-amber-100 text-amber-700",
+      "Cover Design Suite": "bg-purple-100 text-purple-600",
+      "AI Sales Machine Silver": "bg-purple-200 text-purple-700",
+      "AI Sales Machine Gold": "bg-purple-300 text-purple-800",
+      "DFY Silver": "bg-gray-300 text-gray-800",
+      "DFY Gold": "bg-yellow-100 text-yellow-700",
+      "AI Ranker": "bg-emerald-100 text-emerald-600",
+      "AI Profit Macker Lite": "bg-rose-100 text-rose-600",
+      "AI Profit Macker Pro": "bg-rose-200 text-rose-700",
+      RESELLER: "bg-amber-200 text-amber-800",
     };
     return planColors[planName] || "bg-gray-100 text-gray-600";
   };
@@ -284,16 +276,19 @@ const Sidebar = () => {
   const getPlanIcon = (planName) => {
     const planIcons = {
       Free: "fa-box",
-      "Complyzo FE": "fa-rocket",
-      "Complyzo FE+TURBO": "fa-bolt",
-      "Complyzo Unlimited Silver": "fa-infinity",
-      "Complyzo Unlimited Gold": "fa-crown",
-      "Complyzo Competitor Spy Elite": "fa-eye",
-      "Complyzo Competitor Spy Pro": "fa-eye",
-      "Complyzo AI Ranker": "fa-chart-line",
-      "Complyzo DFY Silver": "fa-wrench",
-      "Complyzo DFY Gold": "fa-wrench",
-      "Complyzo AI Profit Machine": "fa-money-bill-wave",
+      FE: "fa-rocket",
+      "FE + TURBO": "fa-bolt",
+      "Unlimited Silver": "fa-infinity",
+      "Unlimited Gold": "fa-crown",
+      "Cover Design Suite": "fa-palette",
+      "AI Sales Machine Silver": "fa-robot",
+      "AI Sales Machine Gold": "fa-robot",
+      "DFY Silver": "fa-wrench",
+      "DFY Gold": "fa-wrench",
+      "AI Ranker": "fa-chart-line",
+      "AI Profit Macker Lite": "fa-money-bill-wave",
+      "AI Profit Macker Pro": "fa-money-bill-wave",
+      RESELLER: "fa-gift",
     };
     return planIcons[planName] || "fa-box";
   };
@@ -302,19 +297,6 @@ const Sidebar = () => {
 
   const isExternalLink = (item) => {
     return item.external === true;
-  };
-
-  // ✅ Get display name based on highest plan ID
-  const getPlanDisplayName = (planId) => {
-    const planMap = {
-      1: "Free",
-      2: "FE",
-      3: "FE+TURBO",
-      4: "Unlimited Silver",
-      5: "Unlimited Gold",
-      10: "AI Profit Machine",
-    };
-    return planMap[planId] || planName || "Free";
   };
 
   return (
@@ -472,21 +454,30 @@ const Sidebar = () => {
                     Loading plan...
                   </span>
                 ) : (
-                  <span
-                    className={`inline-flex items-center gap-1.5 text-[9px] md:text-[10px] font-medium px-2 md:px-2.5 py-0.5 md:py-1 rounded-full ${getPlanColor(planName)} shadow-sm truncate max-w-[120px] md:max-w-none`}
-                  >
-                    <i
-                      className={`fas ${getPlanIcon(planName)} text-[7px] md:text-[8px] flex-shrink-0`}
-                    ></i>
-                    {/* <span className="truncate">
-                      {planName?.replace(/^Complyzo\s+/, "") ||
-                        planName ||
-                        "Free"}
-                    </span> */}
-                    <span className="">
-                      AI Digital Product
+                  <>
+                    <span
+                      className={`inline-flex items-center gap-1.5 text-[9px] md:text-[10px] font-medium px-2 md:px-2.5 py-0.5 md:py-1 rounded-full ${getPlanColor(planName)} shadow-sm truncate max-w-[120px] md:max-w-none`}
+                    >
+                      <i
+                        className={`fas ${getPlanIcon(planName)} text-[7px] md:text-[8px] flex-shrink-0`}
+                      ></i>
+                      <span className="truncate">
+                        {planName?.replace(/^Complyzo\s+/, "") ||
+                          planName ||
+                          "Free"}
+                      </span>
                     </span>
-                  </span>
+                    {isReseller() && (
+                      <span className="text-[8px] md:text-[9px] font-semibold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded-full border border-amber-200 whitespace-nowrap">
+                        🚀 Reseller
+                      </span>
+                    )}
+                    {isAdmin && (
+                      <span className="text-[8px] md:text-[9px] font-semibold text-red-600 bg-red-50 px-1.5 py-0.5 rounded-full border border-red-200 whitespace-nowrap">
+                        Admin
+                      </span>
+                    )}
+                  </>
                 )}
               </div>
             </div>
