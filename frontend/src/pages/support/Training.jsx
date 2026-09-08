@@ -59,7 +59,7 @@ const Training = () => {
 
   // Demo Video Configuration
   const VIDEO_ID = 'YOUR_VIDEO_ID'; // Replace with your YouTube video ID
-  const videoUrl = `https://drive.google.com/file/d/1xez2ZMP9QNDapAufdkL41Hz5X49A6YnD/view?usp=sharing`;
+  const videoUrl = `https://drive.google.com/file/d/1xez2ZMP9QNDapAufdkL41Hz5X49A6YnD/preview`;
 
   // Enhanced FAQ Data
   const faqs = [
