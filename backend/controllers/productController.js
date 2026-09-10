@@ -7,6 +7,339 @@ const CoverImageGenerator = require("../services/generation/coverImageGenerator"
 const PdfCoverReplacer = require("../services/generation/pdfCoverReplacer");
 
 // ================================================================
+// ✅ COOLDOWN CONFIGURATION
+// ================================================================
+
+const GENERATION_COOLDOWN_MINUTES = 10;
+const GENERATION_COOLDOWN_MS = GENERATION_COOLDOWN_MINUTES * 60 * 1000;
+
+// ================================================================
+// ✅ HELPER: Check if user can generate (using updatedAt)
+// ================================================================
+
+const checkGenerationCooldown = async (userId) => {
+  try {
+    // Find the most recently updated product for this user
+    const lastProduct = await Product.findOne({
+      userId: userId,
+      status: { $in: ["completed", "generating"] }
+    }).sort({ updatedAt: -1 });
+
+    if (!lastProduct || !lastProduct.updatedAt) {
+      return { canGenerate: true, remainingMinutes: 0 };
+    }
+
+    const now = Date.now();
+    const lastUpdated = new Date(lastProduct.updatedAt).getTime();
+    const elapsed = now - lastUpdated;
+    const remaining = GENERATION_COOLDOWN_MS - elapsed;
+
+    if (remaining > 0) {
+      const remainingMinutes = Math.ceil(remaining / 60000);
+      return {
+        canGenerate: false,
+        remainingMinutes,
+        remainingMs: remaining,
+        lastGeneratedAt: lastProduct.updatedAt,
+      };
+    }
+
+    return { canGenerate: true, remainingMinutes: 0 };
+  } catch (error) {
+    console.error("❌ Cooldown check error:", error);
+    return { canGenerate: true, remainingMinutes: 0 };
+  }
+};
+
+// ================================================================
+// ✅ CHECK COOLDOWN STATUS
+// ================================================================
+
+exports.checkCooldown = async (req, res) => {
+  try {
+    const cooldownStatus = await checkGenerationCooldown(req.user.id);
+
+    res.json({
+      success: true,
+      data: {
+        canGenerate: cooldownStatus.canGenerate,
+        remainingMinutes: cooldownStatus.remainingMinutes,
+        cooldownMinutes: GENERATION_COOLDOWN_MINUTES,
+        lastGeneratedAt: cooldownStatus.lastGeneratedAt || null,
+      },
+    });
+  } catch (error) {
+    console.error("❌ Cooldown check failed:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+// ================================================================
+// ✅ START GENERATION (With Cooldown)
+// ================================================================
+
+exports.startGeneration = async (req, res) => {
+  try {
+    const productId = req.params.id;
+
+    // ✅ Check cooldown first
+    const cooldownStatus = await checkGenerationCooldown(req.user.id);
+
+    if (!cooldownStatus.canGenerate) {
+      return res.status(429).json({
+        success: false,
+        message: `Please wait ${cooldownStatus.remainingMinutes} more minute${cooldownStatus.remainingMinutes > 1 ? 's' : ''} before generating another product.`,
+        data: {
+          cooldownRemaining: cooldownStatus.remainingMs,
+          remainingMinutes: cooldownStatus.remainingMinutes,
+          cooldownMinutes: GENERATION_COOLDOWN_MINUTES,
+        },
+      });
+    }
+
+    const product = await Product.findById(productId);
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: "Product not found",
+      });
+    }
+
+    if (product.userId.toString() !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        message: "Unauthorized to generate this product",
+      });
+    }
+
+    if (product.status === "generating") {
+      return res.status(400).json({
+        success: false,
+        message: "Product is already being generated",
+      });
+    }
+
+    if (product.status === "completed") {
+      return res.status(400).json({
+        success: false,
+        message: "Product is already completed",
+      });
+    }
+
+    product.status = "generating";
+    product.progress = 0;
+    // ✅ updatedAt will be automatically updated by mongoose timestamps
+    await product.save();
+
+    const generationService = new ProductGenerationService(
+      productId,
+      product.toObject(),
+    );
+
+    generationService.generate().catch(async (error) => {
+      console.error("❌ Generation failed:", error);
+      await Product.findByIdAndUpdate(productId, {
+        status: "failed",
+        error: error.message,
+      });
+    });
+
+    res.json({
+      success: true,
+      message: "Generation started successfully",
+      data: {
+        productId,
+        status: "generating",
+        cooldownMinutes: GENERATION_COOLDOWN_MINUTES,
+        canGenerateAfter: new Date(Date.now() + GENERATION_COOLDOWN_MS),
+      },
+    });
+  } catch (error) {
+    console.error("❌ Generate failed:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+// ================================================================
+// ✅ REGENERATE PRODUCT (With Cooldown)
+// ================================================================
+
+exports.regenerateProduct = async (req, res) => {
+  try {
+    const productId = req.params.id;
+
+    // ✅ Check cooldown first
+    const cooldownStatus = await checkGenerationCooldown(req.user.id);
+
+    if (!cooldownStatus.canGenerate) {
+      return res.status(429).json({
+        success: false,
+        message: `Please wait ${cooldownStatus.remainingMinutes} more minute${cooldownStatus.remainingMinutes > 1 ? 's' : ''} before regenerating.`,
+        data: {
+          cooldownRemaining: cooldownStatus.remainingMs,
+          remainingMinutes: cooldownStatus.remainingMinutes,
+          cooldownMinutes: GENERATION_COOLDOWN_MINUTES,
+        },
+      });
+    }
+
+    const product = await Product.findById(productId);
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: "Product not found",
+      });
+    }
+
+    if (product.userId.toString() !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        message: "Unauthorized to regenerate this product",
+      });
+    }
+
+    if (product.pdfPath && fs.existsSync(product.pdfPath)) {
+      fs.unlinkSync(product.pdfPath);
+    }
+
+    product.status = "draft";
+    product.progress = 0;
+    product.outline = null;
+    product.content = null;
+    product.pdfPath = null;
+    product.error = null;
+    // ✅ updatedAt will be automatically updated
+    await product.save();
+
+    const generationService = new ProductGenerationService(
+      productId,
+      product.toObject(),
+    );
+
+    generationService.generate().catch(async (error) => {
+      console.error("❌ Regeneration failed:", error);
+      await Product.findByIdAndUpdate(productId, {
+        status: "failed",
+        error: error.message,
+      });
+    });
+
+    res.json({
+      success: true,
+      message: "Regeneration started",
+      data: {
+        productId,
+        status: "generating",
+        cooldownMinutes: GENERATION_COOLDOWN_MINUTES,
+        canGenerateAfter: new Date(Date.now() + GENERATION_COOLDOWN_MS),
+      },
+    });
+  } catch (error) {
+    console.error("❌ Regenerate failed:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+// ================================================================
+// GET PROGRESS (With Cooldown Info)
+// ================================================================
+
+exports.getProgress = async (req, res) => {
+  try {
+    const productId = req.params.id;
+
+    const product = await Product.findById(productId);
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: "Product not found",
+      });
+    }
+
+    if (product.userId.toString() !== req.user.id) {
+      return res.status(403).json({
+        success: false,
+        message: "Unauthorized to view this product",
+      });
+    }
+
+    let progress = product.progress || 0;
+    let status = product.status || "generating";
+
+    if (status === "completed") {
+      progress = 100;
+    }
+
+    const stepLabels = [
+      "Understanding your idea",
+      "Creating outline",
+      "Writing content",
+      "Generating cover image",
+      "Creating files",
+      "Building sales page",
+      "Marketing kit",
+    ];
+
+    let currentStepIndex = 0;
+    if (progress >= 100) currentStepIndex = 6;
+    else if (progress >= 85) currentStepIndex = 5;
+    else if (progress >= 70) currentStepIndex = 4;
+    else if (progress >= 50) currentStepIndex = 3;
+    else if (progress >= 30) currentStepIndex = 2;
+    else if (progress >= 15) currentStepIndex = 1;
+    else currentStepIndex = 0;
+
+    const steps = stepLabels.map((label, index) => ({
+      id: index + 1,
+      label,
+      status:
+        status === "completed"
+          ? "completed"
+          : index < currentStepIndex
+            ? "completed"
+            : index === currentStepIndex && status === "generating"
+              ? "in-progress"
+              : "pending",
+    }));
+
+    // ✅ Include cooldown info
+    const cooldownStatus = await checkGenerationCooldown(req.user.id);
+
+    res.json({
+      success: true,
+      data: {
+        status,
+        progress: Math.min(progress, 100),
+        currentStep: currentStepIndex,
+        currentStepLabel: stepLabels[currentStepIndex] || "Processing...",
+        steps,
+        error: product.error || null,
+        // ✅ Cooldown info
+        canGenerate: cooldownStatus.canGenerate,
+        cooldownRemainingMinutes: cooldownStatus.remainingMinutes,
+        cooldownMinutes: GENERATION_COOLDOWN_MINUTES,
+        lastGeneratedAt: product.updatedAt || null,
+      },
+    });
+  } catch (error) {
+    console.error("❌ Progress check failed:", error);
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
+
+// ================================================================
 // CREATE PRODUCT
 // ================================================================
 
@@ -53,163 +386,6 @@ exports.createProduct = async (req, res) => {
     });
   }
 };
-
-// ================================================================
-// START GENERATION
-// ================================================================
-
-exports.startGeneration = async (req, res) => {
-  try {
-    const productId = req.params.id;
-
-    const product = await Product.findById(productId);
-    if (!product) {
-      return res.status(404).json({
-        success: false,
-        message: "Product not found",
-      });
-    }
-
-    if (product.userId.toString() !== req.user.id) {
-      return res.status(403).json({
-        success: false,
-        message: "Unauthorized to generate this product",
-      });
-    }
-
-    if (product.status === "generating") {
-      return res.status(400).json({
-        success: false,
-        message: "Product is already being generated",
-      });
-    }
-
-    if (product.status === "completed") {
-      return res.status(400).json({
-        success: false,
-        message: "Product is already completed",
-      });
-    }
-
-    product.status = "generating";
-    product.progress = 0;
-    await product.save();
-
-    const generationService = new ProductGenerationService(
-      productId,
-      product.toObject(),
-    );
-
-    generationService.generate().catch(async (error) => {
-      console.error("❌ Generation failed:", error);
-      await Product.findByIdAndUpdate(productId, {
-        status: "failed",
-        error: error.message,
-      });
-    });
-
-    res.json({
-      success: true,
-      message: "Generation started successfully",
-      data: {
-        productId,
-        status: "generating",
-      },
-    });
-  } catch (error) {
-    console.error("❌ Generate failed:", error);
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
-  }
-};
-
-// backend/controllers/productController.js
-
-exports.getProgress = async (req, res) => {
-  try {
-    const productId = req.params.id;
-
-    const product = await Product.findById(productId);
-    if (!product) {
-      return res.status(404).json({
-        success: false,
-        message: "Product not found",
-      });
-    }
-
-    if (product.userId.toString() !== req.user.id) {
-      return res.status(403).json({
-        success: false,
-        message: "Unauthorized to view this product",
-      });
-    }
-
-    // ✅ FIX: Use the progress from the database
-    let progress = product.progress || 0;
-    let status = product.status || "generating";
-
-    // If status is completed, set progress to 100
-    if (status === "completed") {
-      progress = 100;
-    }
-
-    // Step labels
-    const stepLabels = [
-      "Understanding your idea",
-      "Creating outline",
-      "Writing content",
-      "Generating cover image",
-      "Creating files",
-      "Building sales page",
-      "Marketing kit",
-    ];
-
-    // Determine current step based on progress
-    let currentStepIndex = 0;
-    if (progress >= 100) currentStepIndex = 6;
-    else if (progress >= 85) currentStepIndex = 5;
-    else if (progress >= 70) currentStepIndex = 4;
-    else if (progress >= 50) currentStepIndex = 3;
-    else if (progress >= 30) currentStepIndex = 2;
-    else if (progress >= 15) currentStepIndex = 1;
-    else currentStepIndex = 0;
-
-    // Build steps with correct status
-    const steps = stepLabels.map((label, index) => ({
-      id: index + 1,
-      label,
-      status:
-        status === "completed"
-          ? "completed"
-          : index < currentStepIndex
-            ? "completed"
-            : index === currentStepIndex && status === "generating"
-              ? "in-progress"
-              : "pending",
-    }));
-
-    res.json({
-      success: true,
-      data: {
-        status,
-        progress: Math.min(progress, 100), // Ensure progress doesn't exceed 100
-        currentStep: currentStepIndex,
-        currentStepLabel: stepLabels[currentStepIndex] || "Processing...",
-        steps,
-        error: product.error || null,
-      },
-    });
-  } catch (error) {
-    console.error("❌ Progress check failed:", error);
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
-  }
-};
-
 
 // ================================================================
 // GET PRODUCT BY ID
@@ -277,10 +453,7 @@ exports.getUserProducts = async (req, res) => {
 exports.deleteProduct = async (req, res) => {
   try {
     const productId = req.params.id;
-    
 
-
-    // Validate product ID
     if (!productId) {
       return res.status(400).json({
         success: false,
@@ -288,7 +461,6 @@ exports.deleteProduct = async (req, res) => {
       });
     }
 
-    // Find the product
     const product = await Product.findById(productId);
     
     if (!product) {
@@ -298,8 +470,6 @@ exports.deleteProduct = async (req, res) => {
       });
     }
 
-
-    // Check ownership
     if (product.userId.toString() !== req.user.id) {
       return res.status(403).json({
         success: false,
@@ -307,154 +477,51 @@ exports.deleteProduct = async (req, res) => {
       });
     }
 
-    // Get project root path
     const projectRoot = path.join(__dirname, '..');
 
-    // ================================================================
-    // ✅ DELETE ALL FILES FROM FOLDERS
-    // ================================================================
-
-    // 1. Delete PDF file
     if (product.pdfPath) {
       const fullPath = path.join(projectRoot, product.pdfPath);
-      if (fs.existsSync(fullPath)) {
-        fs.unlinkSync(fullPath);
-      } else {
-      }
+      if (fs.existsSync(fullPath)) fs.unlinkSync(fullPath);
     }
 
-    // 2. Delete cover image
     if (product.coverImage) {
       const fullPath = path.join(projectRoot, product.coverImage);
-      if (fs.existsSync(fullPath)) {
-        fs.unlinkSync(fullPath);
-      } else {
-      }
+      if (fs.existsSync(fullPath)) fs.unlinkSync(fullPath);
     }
 
-    // 3. Delete temp cover image if exists
     if (product.tempCoverImage) {
       const fullPath = path.join(projectRoot, product.tempCoverImage);
-      if (fs.existsSync(fullPath)) {
-        fs.unlinkSync(fullPath);
-      }
+      if (fs.existsSync(fullPath)) fs.unlinkSync(fullPath);
     }
 
-    // 4. Delete mockups if they exist
     if (product.mockups && Array.isArray(product.mockups)) {
       for (const mockup of product.mockups) {
         if (mockup.path) {
           const fullPath = path.join(projectRoot, mockup.path);
-          if (fs.existsSync(fullPath)) {
-            fs.unlinkSync(fullPath);
-          }
+          if (fs.existsSync(fullPath)) fs.unlinkSync(fullPath);
         }
       }
     }
 
-    // 5. Delete posters if they exist
     if (product.posters && Array.isArray(product.posters)) {
       for (const poster of product.posters) {
         if (poster.path) {
           const fullPath = path.join(projectRoot, poster.path);
-          if (fs.existsSync(fullPath)) {
-            fs.unlinkSync(fullPath);
-          }
+          if (fs.existsSync(fullPath)) fs.unlinkSync(fullPath);
         }
       }
     }
 
-    // ================================================================
-    // ✅ DELETE FROM DATABASE - USING findByIdAndDelete
-    // ================================================================
-
-    // ✅ Method 1: Using findByIdAndDelete (recommended)
-    const deletedProduct = await Product.findByIdAndDelete(productId);
-    
-    if (!deletedProduct) {
-      return res.status(500).json({
-        success: false,
-        message: "Failed to delete product from database",
-      });
-    }
+    await Product.findByIdAndDelete(productId);
 
     res.json({
       success: true,
       message: "Product and all associated files deleted successfully",
-      data: {
-        id: productId,
-        title: product.title,
-        deleted: true,
-      },
+      data: { id: productId, title: product.title, deleted: true },
     });
 
   } catch (error) {
     console.error("❌ Delete failed:", error);
-    res.status(500).json({
-      success: false,
-      message: error.message,
-    });
-  }
-};
-
-// ================================================================
-// REGENERATE PRODUCT
-// ================================================================
-
-exports.regenerateProduct = async (req, res) => {
-  try {
-    const productId = req.params.id;
-
-    const product = await Product.findById(productId);
-    if (!product) {
-      return res.status(404).json({
-        success: false,
-        message: "Product not found",
-      });
-    }
-
-    if (product.userId.toString() !== req.user.id) {
-      return res.status(403).json({
-        success: false,
-        message: "Unauthorized to regenerate this product",
-      });
-    }
-
-    if (product.pdfPath && fs.existsSync(product.pdfPath)) {
-      fs.unlinkSync(product.pdfPath);
-    }
-
-    product.status = "draft";
-    product.progress = 0;
-    product.outline = null;
-    product.content = null;
-    product.pdfPath = null;
-    product.error = null;
-    await product.save();
-
-    const generationService = new ProductGenerationService(
-      productId,
-      product.toObject(),
-    );
-
-    generationService.generate().catch(async (error) => {
-      console.error("❌ Regeneration failed:", error);
-      await Product.findByIdAndUpdate(productId, {
-        status: "failed",
-        error: error.message,
-      });
-    });
-
-    res.json({
-      success: true,
-      message: "Regeneration started",
-      data: {
-        productId,
-        status: "generating",
-      },
-    });
-  } catch (error) {
-    console.error("❌ Regenerate failed:", error);
     res.status(500).json({
       success: false,
       message: error.message,
@@ -558,7 +625,7 @@ exports.getMarketingContent = async (req, res) => {
 };
 
 // ================================================================
-// ✅ GENERATE COVER IMAGE
+// GENERATE COVER IMAGE
 // ================================================================
 
 exports.generateCoverImage = async (req, res) => {
@@ -590,7 +657,6 @@ exports.generateCoverImage = async (req, res) => {
       });
     }
 
-    // Store temporary image URL
     await Product.findByIdAndUpdate(productId, {
       tempCoverImage: imageUrl,
     });
@@ -611,10 +677,8 @@ exports.generateCoverImage = async (req, res) => {
   }
 };
 
-// backend/controllers/productController.js
-
 // ================================================================
-// MERGE COVER WITH PDF - Updated
+// MERGE COVER WITH PDF
 // ================================================================
 
 exports.mergeCoverWithPdf = async (req, res) => {
@@ -653,12 +717,9 @@ exports.mergeCoverWithPdf = async (req, res) => {
       });
     }
 
-
-    // ✅ Replace cover with proper error handling
     const replacer = new PdfCoverReplacer(productId, product.toObject());
     const newPdfPath = await replacer.replaceCover(product.pdfPath, coverUrl);
 
-    // ✅ Verify the new PDF exists and has content
     if (!fs.existsSync(newPdfPath)) {
       throw new Error("New PDF file was not created");
     }
@@ -668,7 +729,6 @@ exports.mergeCoverWithPdf = async (req, res) => {
       throw new Error("New PDF file is empty");
     }
 
-    // ✅ Update product with new PDF path
     await Product.findByIdAndUpdate(productId, {
       pdfPath: newPdfPath,
       coverImage: coverUrl,
@@ -676,7 +736,6 @@ exports.mergeCoverWithPdf = async (req, res) => {
       updatedAt: new Date(),
     });
 
-    // ✅ Delete old PDF
     try {
       if (fs.existsSync(product.pdfPath) && product.pdfPath !== newPdfPath) {
         fs.unlinkSync(product.pdfPath);
