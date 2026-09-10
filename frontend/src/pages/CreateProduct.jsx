@@ -16,6 +16,7 @@ import {
   MoreHorizontal,
   Sparkles,
   FolderOpen,
+  Clock,
 } from "lucide-react";
 
 // ================================================================
@@ -251,6 +252,12 @@ const examples = [
 ];
 
 // ================================================================
+// ✅ COOLDOWN CONFIGURATION
+// ================================================================
+
+const GENERATION_COOLDOWN_MINUTES = 10;
+
+// ================================================================
 // MAIN COMPONENT
 // ================================================================
 
@@ -271,6 +278,10 @@ const CreateProduct = () => {
   const [pollingInterval, setPollingInterval] = useState(null);
   const [showLoader, setShowLoader] = useState(false);
   const [loaderStep, setLoaderStep] = useState(0);
+
+  // ✅ Cooldown states
+  const [cooldownRemaining, setCooldownRemaining] = useState(0);
+  const [cooldownTimer, setCooldownTimer] = useState(null);
 
   // Track if generation is in progress (prevents multiple generations)
   const isGeneratingRef = useRef(false);
@@ -296,7 +307,6 @@ const CreateProduct = () => {
 
   // ✅ Initialize form data with product data from navigation
   const [formData, setFormData] = useState(() => {
-    // Check if we have data from Topic Finder
     if (productDataFromNav) {
       return {
         productType: productDataFromNav.productType || "",
@@ -318,7 +328,6 @@ const CreateProduct = () => {
         marketing: null,
         coverImage: productDataFromNav.coverImage || null,
         pdfPath: null,
-        // ✅ Additional fields from Topic Finder
         keywords: productDataFromNav.keywords || [],
         estimatedSales: productDataFromNav.estimatedSales || "",
         difficulty: productDataFromNav.difficulty || "Medium",
@@ -374,8 +383,43 @@ const CreateProduct = () => {
     currentStepLabel: "",
   });
 
-  // ✅ productTypes is now defined, so this works
   const selectedType = productTypes.find((t) => t.id === formData.productType);
+
+  // ✅ Check cooldown on mount
+  useEffect(() => {
+    const checkCooldown = async () => {
+      try {
+        const response = await api.get('/products/cooldown');
+        if (response.data?.success) {
+          const { canGenerate, remainingMinutes } = response.data.data;
+          if (!canGenerate && remainingMinutes > 0) {
+            setCooldownRemaining(remainingMinutes);
+          }
+        }
+      } catch (error) {
+        console.error('Cooldown check failed:', error);
+      }
+    };
+    checkCooldown();
+  }, []);
+
+  // ✅ Cooldown timer countdown
+  useEffect(() => {
+    if (cooldownRemaining > 0) {
+      const timer = setInterval(() => {
+        setCooldownRemaining(prev => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 60000); // Update every minute
+      
+      setCooldownTimer(timer);
+      return () => clearInterval(timer);
+    }
+  }, [cooldownRemaining]);
 
   // ✅ Show toast when data is auto-filled from Topic Finder
   useEffect(() => {
@@ -384,18 +428,15 @@ const CreateProduct = () => {
         `📋 Topic "${productDataFromNav.title}" loaded! Edit and generate.`,
         { duration: 4000 },
       );
-      console.log("📦 Auto-filled from Topic Finder:", productDataFromNav);
     } else if (productDataFromNav) {
       toast.success(
         `📋 "${productDataFromNav.title}" loaded! Edit and generate.`,
         { duration: 3000 },
       );
-      console.log("📦 Auto-filled from product data:", productDataFromNav);
     }
   }, [productDataFromNav, fromTopicFinder]);
 
   useEffect(() => {
-    // Check if there's a generation in progress from localStorage
     const storedProductId = localStorage.getItem("generatingProductId");
     const storedProgress = localStorage.getItem("generationProgress");
 
@@ -408,8 +449,6 @@ const CreateProduct = () => {
         setGenerating(true);
         setGenerationComplete(false);
         isGeneratingRef.current = true;
-
-        // Resume polling
         pollGenerationProgress(storedProductId);
       } catch (e) {
         console.error("Failed to restore progress:", e);
@@ -423,7 +462,6 @@ const CreateProduct = () => {
     };
   }, []);
 
-  // Save progress to localStorage
   useEffect(() => {
     if (productId && showProgressBox) {
       localStorage.setItem("generatingProductId", productId);
@@ -431,7 +469,6 @@ const CreateProduct = () => {
     }
   }, [productId, liveProgress, showProgressBox]);
 
-  // Loader animation steps
   const loaderSteps = [
     "🔄 Initializing AI Engine...",
     "📋 Gathering product details...",
@@ -479,7 +516,6 @@ const CreateProduct = () => {
       clearInterval(pollingInterval);
     }
 
-    console.log("🔄 Starting progress polling...");
     setShowProgressBox(true);
     setGenerationComplete(false);
 
@@ -488,11 +524,6 @@ const CreateProduct = () => {
         const response = await api.get(`/products/${productId}/progress`);
         const data = response.data?.data || response.data;
 
-        console.log("📊 Progress data:", data);
-        console.log(
-          `📊 Progress: ${data.progress}% - ${data.currentStepLabel}`,
-        );
-
         if (data.status === "completed") {
           clearInterval(interval);
           setPollingInterval(null);
@@ -500,7 +531,6 @@ const CreateProduct = () => {
           isGeneratingRef.current = false;
           setGenerating(false);
 
-          // Update all progress states to 100%
           setProgress({
             currentStep: 6,
             totalSteps: 7,
@@ -531,7 +561,6 @@ const CreateProduct = () => {
             ],
           });
 
-          // Fetch full product data
           const productRes = await api.get(`/products/${productId}`);
           const productData = productRes.data?.data || productRes.data;
           setFormData((prev) => ({
@@ -544,7 +573,9 @@ const CreateProduct = () => {
             marketing: productData.marketing,
           }));
 
-          toast.success("🎉 Your product is ready!");
+          // ✅ Start cooldown after completion
+          setCooldownRemaining(GENERATION_COOLDOWN_MINUTES);
+          toast.success(`🎉 Product ready! Next generation available in ${GENERATION_COOLDOWN_MINUTES} minutes.`);
 
           localStorage.removeItem("generatingProductId");
           localStorage.removeItem("generationProgress");
@@ -565,7 +596,6 @@ const CreateProduct = () => {
           localStorage.removeItem("generatingProductId");
           localStorage.removeItem("generationProgress");
         } else {
-          // Update progress based on data from backend
           const progressVal = data.progress || 0;
           const stepLabels = [
             "Understanding your idea",
@@ -582,7 +612,6 @@ const CreateProduct = () => {
             stepLabels.length - 1,
           );
 
-          // Update progress state
           setProgress((prev) => {
             const updatedSteps = prev.steps.map((s, i) => ({
               ...s,
@@ -602,7 +631,6 @@ const CreateProduct = () => {
             };
           });
 
-          // Update live progress for the box
           const updatedSteps = liveProgress.steps.map((s, i) => ({
             ...s,
             status:
@@ -618,10 +646,6 @@ const CreateProduct = () => {
             currentStepLabel: stepLabels[currentStepIndex] || "Processing...",
             steps: updatedSteps,
           });
-
-          console.log(
-            `📊 Progress updated: ${progressVal}% - ${stepLabels[currentStepIndex]}`,
-          );
         }
       } catch (error) {
         console.error("Polling error:", error);
@@ -631,14 +655,18 @@ const CreateProduct = () => {
     setPollingInterval(interval);
   };
 
-  // Handle generate with live progress
+  // ✅ Handle generate with cooldown check
   const handleGenerateAll = async () => {
     if (isGeneratingRef.current) {
       toast.error("⏳ Generation already in progress. Please wait.");
       return;
     }
 
-    console.log("🔵 GENERATE BUTTON CLICKED");
+    // ✅ Check cooldown
+    if (cooldownRemaining > 0) {
+      toast.error(`⏳ Please wait ${cooldownRemaining} more minute${cooldownRemaining > 1 ? 's' : ''} before generating another product.`);
+      return;
+    }
 
     const required = [
       "productType",
@@ -662,7 +690,6 @@ const CreateProduct = () => {
       return;
     }
 
-    // Show loader animation
     await runLoaderAnimation();
 
     isGeneratingRef.current = true;
@@ -697,7 +724,6 @@ const CreateProduct = () => {
       };
 
       const productResponse = await api.post("/products", productPayload);
-      console.log("✅ Product created:", productResponse.data);
 
       const newProductId =
         productResponse.data?.data?.id ||
@@ -710,10 +736,8 @@ const CreateProduct = () => {
       }
 
       setProductId(newProductId);
-      console.log("✅ Product ID:", newProductId);
 
       await api.post(`/products/${newProductId}/generate`);
-      console.log("✅ Generation started");
 
       toast.success("⏳ AI is working on your product...", { duration: 2000 });
 
@@ -727,11 +751,22 @@ const CreateProduct = () => {
       localStorage.removeItem("generatingProductId");
       localStorage.removeItem("generationProgress");
 
-      const errorMessage =
-        error.response?.data?.message ||
-        error.message ||
-        "Something went wrong";
-      toast.error(`Failed: ${errorMessage}`);
+      // ✅ Handle cooldown error
+      if (error.response?.status === 429) {
+        const data = error.response.data;
+        if (data.data?.remainingMinutes) {
+          setCooldownRemaining(data.data.remainingMinutes);
+          toast.error(`⏳ ${data.message}`);
+        } else {
+          toast.error(data.message || "Please wait before generating again");
+        }
+      } else {
+        const errorMessage =
+          error.response?.data?.message ||
+          error.message ||
+          "Something went wrong";
+        toast.error(`Failed: ${errorMessage}`);
+      }
       setCurrentStep(1);
     }
   };
@@ -776,14 +811,11 @@ const CreateProduct = () => {
   if (showLoader) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0a0a0a]/60 backdrop-blur-2xl">
-        {/* ===== AMBIENT GLOW ===== */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-[#FACC15]/10 rounded-full blur-[120px]" />
         </div>
 
-        {/* ===== CONTENT ===== */}
         <div className="relative flex flex-col items-center gap-10">
-          {/* ===== AI BADGE ===== */}
           <div className="relative bg-gradient-to-r from-[#FACC15] to-[#e5b800] text-[#111111] px-6 py-2.5 rounded-full text-xs font-bold tracking-[0.15em] shadow-[0_8px_30px_rgba(250,204,21,0.35)] flex items-center gap-3 border border-white/40">
             <span className="relative flex h-2 w-2">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#111111] opacity-60"></span>
@@ -796,18 +828,12 @@ const CreateProduct = () => {
             </span>
           </div>
 
-          {/* ===== LOADER ===== */}
           <div className="relative w-24 h-24 flex items-center justify-center">
-            {/* outer pulse ring */}
             <div
               className="absolute inset-0 border border-[#FACC15]/20 rounded-full animate-ping"
               style={{ animationDuration: "2s" }}
             ></div>
-
-            {/* static track */}
             <div className="absolute inset-2 border-2 border-white/5 rounded-full"></div>
-
-            {/* primary spinner */}
             <div
               className="absolute inset-2 rounded-full animate-spin"
               style={{
@@ -819,8 +845,6 @@ const CreateProduct = () => {
                 mask: "radial-gradient(farthest-side, transparent calc(100% - 3px), black calc(100% - 3px))",
               }}
             ></div>
-
-            {/* secondary counter-spinner for depth */}
             <div
               className="absolute inset-5 rounded-full animate-spin opacity-40"
               style={{
@@ -833,8 +857,6 @@ const CreateProduct = () => {
                 mask: "radial-gradient(farthest-side, transparent calc(100% - 2px), black calc(100% - 2px))",
               }}
             ></div>
-
-            {/* center icon */}
             <div className="relative z-10 w-9 h-9 flex items-center justify-center">
               <svg viewBox="0 0 24 24" fill="none" className="w-full h-full">
                 <path
@@ -847,7 +869,6 @@ const CreateProduct = () => {
             </div>
           </div>
 
-          {/* ===== STATUS TEXT ===== */}
           <div className="flex flex-col items-center gap-2">
             <p className="text-white/90 text-sm font-medium tracking-wide">
               Crafting your result
@@ -883,21 +904,14 @@ const CreateProduct = () => {
           <Navbar />
           <main className="flex-1 overflow-y-auto p-6 flex items-center justify-center">
             <div className="relative bg-white rounded-3xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.15)] border border-[#ECECE9] p-12 text-center max-w-md mx-auto overflow-hidden">
-              {/* ambient glow behind the icon */}
               <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-64 bg-green-500/10 rounded-full blur-[80px] pointer-events-none"></div>
 
-              {/* ===== Animated Success Icon ===== */}
               <div className="relative w-28 h-28 mx-auto mb-8">
-                {/* soft outer ring pulse */}
                 <div
                   className="absolute inset-0 bg-green-500/20 rounded-full animate-ping opacity-60"
                   style={{ animationDuration: "2s" }}
                 ></div>
-
-                {/* static ring for depth */}
                 <div className="absolute -inset-2 rounded-full border border-green-500/15"></div>
-
-                {/* main circle with gradient instead of flat fill */}
                 <div className="relative z-10 w-28 h-28 bg-gradient-to-b from-green-400 to-green-600 rounded-full flex items-center justify-center shadow-[0_10px_30px_-5px_rgba(34,197,94,0.5)] transition-transform duration-500 hover:scale-105">
                   <svg
                     className="w-14 h-14 text-white"
@@ -920,18 +934,25 @@ const CreateProduct = () => {
                 </div>
               </div>
 
-              {/* ===== Copy ===== */}
               <h2 className="text-2xl font-semibold text-[#111111] mb-2 tracking-tight">
                 Success
               </h2>
-              <p className="text-[#6B7280] text-[15px] leading-relaxed mb-8">
+              <p className="text-[#6B7280] text-[15px] leading-relaxed mb-4">
                 Your product has been generated successfully and is ready to
                 view.
               </p>
 
-              {/* ===== Action Buttons ===== */}
+              {/* ✅ Cooldown Notice */}
+              {cooldownRemaining > 0 && (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-4 flex items-center gap-2 justify-center">
+                  <Clock className="w-4 h-4 text-amber-600" />
+                  <p className="text-xs text-amber-700">
+                    Next generation available in <strong>{cooldownRemaining} minute{cooldownRemaining > 1 ? 's' : ''}</strong>
+                  </p>
+                </div>
+              )}
+
               <div className="flex gap-3">
-                {/* Download PDF Button */}
                 <button
                   onClick={downloadPDF}
                   className="w-full bg-[#111111] text-white font-medium text-sm py-3 rounded-xl hover:bg-[#222222] transition-colors duration-200 shadow-sm flex items-center justify-center gap-2"
@@ -940,7 +961,6 @@ const CreateProduct = () => {
                   Download PDF
                 </button>
 
-                {/* Go to My Projects Button */}
                 <button
                   onClick={() => navigate("/products")}
                   className="w-full bg-white text-[#111111] font-medium text-sm py-3 rounded-xl hover:bg-gray-50 transition-colors duration-200 shadow-sm border border-gray-200 flex items-center justify-center gap-2"
@@ -975,6 +995,22 @@ const CreateProduct = () => {
 
         <main className="p-4 md:p-6">
           <div className="">
+            {/* ✅ Cooldown Banner */}
+            {cooldownRemaining > 0 && (
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-4 flex items-center gap-3">
+                <Clock className="w-5 h-5 text-amber-600" />
+                <div>
+                  <p className="text-sm font-medium text-amber-800">Generation Cooldown Active</p>
+                  <p className="text-xs text-amber-700">
+                    Please wait <strong>{cooldownRemaining} minute{cooldownRemaining > 1 ? 's' : ''}</strong> before generating another product.
+                  </p>
+                </div>
+                <span className="ml-auto text-lg font-bold text-amber-700">
+                  {cooldownRemaining}m
+                </span>
+              </div>
+            )}
+
             {/* Header */}
             <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
               <div>
@@ -1030,12 +1066,12 @@ const CreateProduct = () => {
                         <button
                           key={item.id}
                           onClick={() => handleProductTypeSelect(item.id)}
-                          disabled={generating}
+                          disabled={generating || cooldownRemaining > 0}
                           className={`relative flex h-[105px] flex-col items-center justify-center rounded-[9px] border text-center transition ${
                             isSelected
                               ? "border-[#FACC15] bg-[#FACC15]/5 shadow-[0_0_0_1px_rgba(250,204,21,.2)]"
                               : "border-[#E5E7EB] bg-white hover:border-[#FACC15]/50"
-                          } ${generating ? "opacity-50 cursor-not-allowed" : ""}`}
+                          } ${(generating || cooldownRemaining > 0) ? "opacity-50 cursor-not-allowed" : ""}`}
                         >
                           {isSelected && (
                             <span className="absolute right-[6px] top-[6px] flex h-[14px] w-[14px] items-center justify-center rounded-full bg-[#FACC15]">
@@ -1079,7 +1115,6 @@ const CreateProduct = () => {
                   </p>
 
                   <div className="mt-[17px] grid grid-cols-1 md:grid-cols-2 gap-x-[21px] gap-y-[13px]">
-                    {/* Product Title */}
                     <div className="md:col-span-2">
                       <label className="mb-[6px] block text-[12px] font-medium text-[#111111]">
                         Product Title / Idea{" "}
@@ -1090,13 +1125,12 @@ const CreateProduct = () => {
                         name="title"
                         value={formData.title}
                         onChange={handleInputChange}
-                        disabled={generating}
+                        disabled={generating || cooldownRemaining > 0}
                         placeholder="e.g., The Ultimate Freelancing Guide"
                         className="h-[36px] w-full rounded-[6px] border border-[#E5E7EB] bg-[#F8F8F6] px-[10px] text-[12px] text-[#111111] outline-none placeholder:text-[#6B7280] focus:border-[#FACC15] focus:ring-1 focus:ring-[#FACC15] disabled:opacity-50"
                       />
                     </div>
 
-                    {/* Niche */}
                     <div>
                       <label className="mb-[6px] block text-[12px] font-medium text-[#111111]">
                         Niche / Category <span className="text-red-500">*</span>
@@ -1106,13 +1140,12 @@ const CreateProduct = () => {
                         name="niche"
                         value={formData.niche}
                         onChange={handleInputChange}
-                        disabled={generating}
+                        disabled={generating || cooldownRemaining > 0}
                         placeholder="e.g., Fitness, Marketing"
                         className="h-[36px] w-full rounded-[6px] border border-[#E5E7EB] bg-[#F8F8F6] px-[10px] text-[12px] text-[#111111] outline-none placeholder:text-[#6B7280] focus:border-[#FACC15] focus:ring-1 focus:ring-[#FACC15] disabled:opacity-50"
                       />
                     </div>
 
-                    {/* Target Audience */}
                     <div>
                       <label className="mb-[6px] block text-[12px] font-medium text-[#111111]">
                         Target Audience <span className="text-red-500">*</span>
@@ -1122,13 +1155,12 @@ const CreateProduct = () => {
                         name="audience"
                         value={formData.audience}
                         onChange={handleInputChange}
-                        disabled={generating}
+                        disabled={generating || cooldownRemaining > 0}
                         placeholder="e.g., Beginners, students, entrepreneurs..."
                         className="h-[36px] w-full rounded-[6px] border border-[#E5E7EB] bg-[#F8F8F6] px-[10px] text-[12px] text-[#111111] outline-none placeholder:text-[#6B7280] focus:border-[#FACC15] focus:ring-1 focus:ring-[#FACC15] disabled:opacity-50"
                       />
                     </div>
 
-                    {/* Main Problem */}
                     <div>
                       <label className="mb-[6px] block text-[12px] font-medium text-[#111111]">
                         Main Problem <span className="text-red-500">*</span>
@@ -1138,13 +1170,12 @@ const CreateProduct = () => {
                         name="problem"
                         value={formData.problem}
                         onChange={handleInputChange}
-                        disabled={generating}
+                        disabled={generating || cooldownRemaining > 0}
                         placeholder="What problem will this solve?"
                         className="h-[36px] w-full rounded-[6px] border border-[#E5E7EB] bg-[#F8F8F6] px-[10px] text-[12px] text-[#111111] outline-none placeholder:text-[#6B7280] focus:border-[#FACC15] focus:ring-1 focus:ring-[#FACC15] disabled:opacity-50"
                       />
                     </div>
 
-                    {/* Desired Outcome */}
                     <div>
                       <label className="mb-[6px] block text-[12px] font-medium text-[#111111]">
                         Desired Outcome <span className="text-red-500">*</span>
@@ -1154,13 +1185,12 @@ const CreateProduct = () => {
                         name="outcome"
                         value={formData.outcome}
                         onChange={handleInputChange}
-                        disabled={generating}
+                        disabled={generating || cooldownRemaining > 0}
                         placeholder="What will your customers achieve?"
                         className="h-[36px] w-full rounded-[6px] border border-[#E5E7EB] bg-[#F8F8F6] px-[10px] text-[12px] text-[#111111] outline-none placeholder:text-[#6B7280] focus:border-[#FACC15] focus:ring-1 focus:ring-[#FACC15] disabled:opacity-50"
                       />
                     </div>
 
-                    {/* Tone */}
                     <div>
                       <label className="mb-[6px] block text-[12px] font-medium text-[#111111]">
                         Tone
@@ -1169,7 +1199,7 @@ const CreateProduct = () => {
                         name="tone"
                         value={formData.tone}
                         onChange={handleInputChange}
-                        disabled={generating}
+                        disabled={generating || cooldownRemaining > 0}
                         className="h-[36px] w-full rounded-[6px] border border-[#E5E7EB] bg-[#F8F8F6] px-[10px] text-[12px] text-[#111111] outline-none focus:border-[#FACC15] focus:ring-1 focus:ring-[#FACC15] disabled:opacity-50"
                       >
                         {tones.map((tone) => (
@@ -1180,7 +1210,6 @@ const CreateProduct = () => {
                       </select>
                     </div>
 
-                    {/* Author Name */}
                     <div>
                       <label className="mb-[6px] block text-[12px] font-medium text-[#111111]">
                         Author Name
@@ -1190,13 +1219,12 @@ const CreateProduct = () => {
                         name="authorName"
                         value={formData.authorName}
                         onChange={handleInputChange}
-                        disabled={generating}
+                        disabled={generating || cooldownRemaining > 0}
                         placeholder="Your name or pen name"
                         className="h-[36px] w-full rounded-[6px] border border-[#E5E7EB] bg-[#F8F8F6] px-[10px] text-[12px] text-[#111111] outline-none placeholder:text-[#6B7280] focus:border-[#FACC15] focus:ring-1 focus:ring-[#FACC15] disabled:opacity-50"
                       />
                     </div>
 
-                    {/* Brand Name */}
                     <div>
                       <label className="mb-[6px] block text-[12px] font-medium text-[#111111]">
                         Brand Name
@@ -1206,7 +1234,7 @@ const CreateProduct = () => {
                         name="brandName"
                         value={formData.brandName}
                         onChange={handleInputChange}
-                        disabled={generating}
+                        disabled={generating || cooldownRemaining > 0}
                         placeholder="Your brand name"
                         className="h-[36px] w-full rounded-[6px] border border-[#E5E7EB] bg-[#F8F8F6] px-[10px] text-[12px] text-[#111111] outline-none placeholder:text-[#6B7280] focus:border-[#FACC15] focus:ring-1 focus:ring-[#FACC15] disabled:opacity-50"
                       />
@@ -1221,14 +1249,28 @@ const CreateProduct = () => {
                         generating ||
                         !formData.productType ||
                         !formData.title ||
-                        isGeneratingRef.current
+                        isGeneratingRef.current ||
+                        cooldownRemaining > 0
                       }
-                      className="flex h-[40px] items-center rounded-[7px] bg-[#FACC15] px-[24px] text-[13px] font-semibold text-[#111111] shadow-sm hover:bg-[#e5b800] transition disabled:opacity-50 disabled:cursor-not-allowed"
+                      className={`flex h-[40px] items-center rounded-[7px] px-[24px] text-[13px] font-semibold shadow-sm transition disabled:opacity-50 disabled:cursor-not-allowed ${
+                        cooldownRemaining > 0
+                          ? "bg-gray-200 text-gray-500"
+                          : "bg-[#FACC15] text-[#111111] hover:bg-[#e5b800]"
+                      }`}
                     >
-                      <Sparkles size={16} className="mr-[8px]" />
-                      {generating || isGeneratingRef.current
-                        ? "Generating..."
-                        : "Generate Product"}
+                      {cooldownRemaining > 0 ? (
+                        <>
+                          <Clock size={16} className="mr-[8px]" />
+                          Wait {cooldownRemaining}m
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles size={16} className="mr-[8px]" />
+                          {generating || isGeneratingRef.current
+                            ? "Generating..."
+                            : "Generate Product"}
+                        </>
+                      )}
                     </button>
                   </div>
                 </section>
@@ -1236,7 +1278,6 @@ const CreateProduct = () => {
 
               {/* Right Sidebar */}
               <aside className="space-y-[13px]">
-                {/* Tips Card */}
                 <section className="rounded-[11px] border border-[#E5E7EB] bg-white px-[20px] py-[17px] shadow-sm">
                   <h2 className="flex items-center text-[15px] font-bold text-[#111111]">
                     <Lightbulb size={18} className="mr-[7px] text-[#FACC15]" />
@@ -1267,7 +1308,6 @@ const CreateProduct = () => {
                   </div>
                 </section>
 
-                {/* Examples Card */}
                 <section className="rounded-[11px] border border-[#E5E7EB] bg-white px-[18px] py-[17px] shadow-sm">
                   <div className="flex items-center justify-between">
                     <h2 className="flex items-center text-[15px] font-bold text-[#111111]">
@@ -1339,7 +1379,6 @@ const CreateProduct = () => {
                   </div>
                 </section>
 
-                {/* What Happens Next */}
                 <section className="rounded-[11px] border border-[#E5E7EB] bg-white px-[25px] py-[17px] shadow-sm">
                   <h2 className="text-[15px] font-bold text-[#111111]">
                     What Happens Next?
@@ -1388,7 +1427,6 @@ const CreateProduct = () => {
             </span>
           </div>
 
-          {/* Progress Bar */}
           <div className="w-full h-2.5 bg-[#F8F8F6] rounded-full overflow-hidden">
             <div
               className={`h-full rounded-full transition-all duration-700 ease-out ${
@@ -1400,14 +1438,12 @@ const CreateProduct = () => {
             />
           </div>
 
-          {/* Current Step Label */}
           <p className="text-xs text-[#6B7280] mt-2.5 text-center truncate">
             {generationComplete
               ? "✅ Product ready! Download now."
               : liveProgress.currentStepLabel || "⏳ AI is working..."}
           </p>
 
-          {/* Steps Summary */}
           <div className="mt-3 space-y-1">
             {liveProgress.steps.slice(0, 4).map((step) => (
               <div key={step.id} className="flex items-center gap-2 text-xs">
@@ -1435,7 +1471,6 @@ const CreateProduct = () => {
             ))}
           </div>
 
-          {/* Cancel Button - Only show if not complete */}
           {!generationComplete && (
             <button
               onClick={() => {
@@ -1463,7 +1498,6 @@ const CreateProduct = () => {
         </div>
       )}
 
-      {/* CSS for animation */}
       <style>{`
         @keyframes slideUp {
           from {
