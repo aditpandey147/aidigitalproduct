@@ -23,6 +23,8 @@ router.get('/:id', productController.getProduct);
 // Delete product
 router.delete('/:id', productController.deleteProduct);
 
+router.get('/cooldown', auth, productController.checkCooldown);
+
 // ================================================================
 // GENERATION ENDPOINTS
 // ================================================================
