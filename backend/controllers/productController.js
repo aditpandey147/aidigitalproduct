@@ -10,7 +10,7 @@ const PdfCoverReplacer = require("../services/generation/pdfCoverReplacer");
 // ✅ COOLDOWN CONFIGURATION
 // ================================================================
 
-const GENERATION_COOLDOWN_MINUTES = 10;
+const GENERATION_COOLDOWN_MINUTES = 5;
 const GENERATION_COOLDOWN_MS = GENERATION_COOLDOWN_MINUTES * 60 * 1000;
 
 // ================================================================
