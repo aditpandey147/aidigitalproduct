@@ -281,14 +281,6 @@ const Subscription = () => {
                   <div className="flex items-center gap-6 md:gap-8 md:pl-6 md:border-l md:border-white/10">
                     <div>
                       <p className="text-[10px] uppercase tracking-wider text-gray-500 font-medium mb-1">
-                        Total Purchased
-                      </p>
-                      <p className="text-xl font-bold text-white tabular-nums">
-                        {formatCurrency(totalPurchased)}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-[10px] uppercase tracking-wider text-gray-500 font-medium mb-1">
                         Status
                       </p>
                       <span
