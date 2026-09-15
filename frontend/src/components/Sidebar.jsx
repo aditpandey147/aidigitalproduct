@@ -499,7 +499,7 @@ const Sidebar = () => {
           {isDropdownOpen && (
             <div
               ref={dropdownRef}
-              className="absolute bottom-[160px] md:bottom-[180px] left-3 md:left-5 right-3 md:right-5 bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden animate-slide-up z-50"
+              className="absolute bottom-[160px] md:bottom-[120px] left-3 md:left-5 right-3 md:right-5 bg-white rounded-xl shadow-2xl border border-gray-100 overflow-hidden animate-slide-up z-50"
             >
               <div className="p-1.5 md:p-2">
                 <NavLink
