@@ -38,38 +38,49 @@ class ContentGenerator {
       case "prompt-packs":
       case "prompt packs":
         return await this._generatePromptPack();
+
       case "checklists":
       case "checklist":
         return await this._generateChecklist();
+
       case "workbook":
       case "workbooks":
         return await this._generateWorkbook();
+
       case "spreadsheets":
       case "spreadsheet":
         return await this._generateSpreadsheet();
+
       case "mini-courses":
       case "mini course":
         return await this._generateMiniCourse();
-      case "guide":
-      case "guides":
-      case "ebook":
-      case "ebooks":
-      case "planner":
-      case "planners":
-      case "challenges":
-      case "challenge":
-        return await this._generateChallenge();
+
       case "templates":
       case "template":
         return await this._generateTemplate();
+
       case "worksheets":
       case "worksheet":
         return await this._generateWorksheet();
+
+      // ✅ Challenges get their own handler
+      case "challenges":
+      case "challenge":
+        return await this._generateChallenge();
+
+      // ✅ Ebook, Guide, Planner all generate chapters
+      case "ebook":
+      case "ebooks":
+      case "guide":
+      case "guides":
+      case "planner":
+      case "planners":
+        return await this._generateChapters();
+
       default:
         return await this._generateChapters();
     }
   }
-
   // ================================================================
   // GENERATE MINI COURSE
   // ================================================================
