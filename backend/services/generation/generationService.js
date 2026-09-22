@@ -1870,8 +1870,6 @@ class ProductGenerationService {
     }
   }
 
-  // backend/services/generation/generationService.js
-
   async generate() {
     console.log(`🚀 Starting generation for product ${this.productId}`);
 
@@ -1891,14 +1889,13 @@ class ProductGenerationService {
       await this._updateDatabaseProgress(45, "Generating images...");
 
       let allImages = null;
-      let savedImages = null; // ✅ ADD THIS - to store saved image paths
+      let savedImages = null;
 
       try {
         const imageGenerator = new CoverImageGenerator(this.productData);
         allImages = await imageGenerator.generateAllImages();
 
         if (allImages) {
-          // Save all images locally - this returns the correct structure
           savedImages = await this._saveImages(allImages, this.productId);
           console.log(
             `  ✅ Saved: ${savedImages.coverImage ? "Cover, " : ""}${savedImages.mockups.length} mockups, ${savedImages.posters.length} posters`,
@@ -1908,27 +1905,54 @@ class ProductGenerationService {
         console.warn("⚠️ Image generation failed:", error.message);
       }
 
-      // Step 3: Generate PDF
-      this._updateProgress(70, "Creating PDF...");
-      await this._updateDatabaseProgress(70, "Creating PDF...");
+      // ✅ Step 3: Generate File (PDF OR Excel based on product type)
+      let filePath = null;
+      const productType = this.productData.productType;
 
-      const converter = new HtmlToPdfConverter(
-        this.productData,
-        {
-          chapters: content.chapters || [],
-          fullContent: content.fullContent || "",
-          outline: content.outline || [],
-          prompts: content.prompts || [],
-          items: content.items || [],
-          exercises: content.exercises || [],
-        },
-        savedImages?.coverImage || null, // ✅ Use savedImages
-      );
-      const pdfBuffer = await converter.convert();
-      const filePath = await this._saveFile(pdfBuffer, "pdf");
+      // ✅ Check if it's a spreadsheet → generate Excel
+      if (productType === "spreadsheets" || productType === "spreadsheet") {
+        this._updateProgress(70, "Creating Excel file...");
+        await this._updateDatabaseProgress(70, "Creating Excel file...");
 
-      this._updateProgress(85, "PDF created");
-      await this._updateDatabaseProgress(85, "PDF created");
+        console.log("  📊 Generating Excel file for spreadsheet...");
+
+        // ✅ Pass spec to constructor
+        const excelGenerator = new ExcelGenerator(
+          this.productData,
+          content.sheets,
+        );
+        // ✅ Call generateExcel() — NOT generate()
+        const excelBuffer = await excelGenerator.generateExcel();
+
+        filePath = await this._saveFile(excelBuffer, "excel");
+
+        this._updateProgress(85, "Excel file created");
+        await this._updateDatabaseProgress(85, "Excel file created");
+      } else {
+        // ✅ Everything else → generate PDF
+        this._updateProgress(70, "Creating PDF...");
+        await this._updateDatabaseProgress(70, "Creating PDF...");
+
+        console.log("  📄 Generating PDF file...");
+
+        const converter = new HtmlToPdfConverter(
+          this.productData,
+          {
+            chapters: content.chapters || [],
+            fullContent: content.fullContent || "",
+            outline: content.outline || [],
+            prompts: content.prompts || [],
+            items: content.items || [],
+            exercises: content.exercises || [],
+          },
+          savedImages?.coverImage || null,
+        );
+        const pdfBuffer = await converter.convert();
+        filePath = await this._saveFile(pdfBuffer, "pdf");
+
+        this._updateProgress(85, "PDF created");
+        await this._updateDatabaseProgress(85, "PDF created");
+      }
 
       // Step 4: Generate Marketing Kit
       this._updateProgress(90, "Generating Marketing Kit...");
@@ -1947,14 +1971,13 @@ class ProductGenerationService {
       this._updateProgress(100, "Complete!");
       await this._updateDatabaseProgress(100, "Complete!");
 
-      // ✅ FIX: Use savedImages (the locally saved paths), not allImages
       const updateData = {
         status: "completed",
         progress: 100,
-        pdfPath: filePath,
-        coverImage: savedImages?.coverImage || null, // ✅ Fixed
-        mockups: savedImages?.mockups || [], // ✅ Fixed - has { path, type, prompt }
-        posters: savedImages?.posters || [], // ✅ Fixed - has { path, type, prompt }
+        pdfPath: filePath, // ← Now can be PDF or Excel path
+        coverImage: savedImages?.coverImage || null,
+        mockups: savedImages?.mockups || [],
+        posters: savedImages?.posters || [],
         marketing: marketingData || this._getFallbackMarketing(),
       };
 
@@ -1980,19 +2003,31 @@ class ProductGenerationService {
 
   async _saveFile(buffer, type) {
     const projectRoot = path.join(__dirname, "../..");
-    const fileDir = path.join(projectRoot, `uploads/${type}s`);
+
+    // ✅ Determine folder based on type
+    let fileDir;
+    let extension;
+
+    if (type === "pdf") {
+      fileDir = path.join(projectRoot, "uploads/pdfs");
+      extension = "pdf";
+    } else if (type === "excel") {
+      fileDir = path.join(projectRoot, "uploads/excels");
+      extension = "xlsx";
+    } else {
+      fileDir = path.join(projectRoot, `uploads/${type}s`);
+      extension = type;
+    }
 
     if (!fs.existsSync(fileDir)) {
       fs.mkdirSync(fileDir, { recursive: true });
     }
 
-    const extension = type === "pdf" ? "pdf" : "xlsx";
     const filename = `product_${this.productId}_${Date.now()}.${extension}`;
-
     const fullPath = path.join(fileDir, filename);
     fs.writeFileSync(fullPath, buffer);
 
-    const relativePath = `uploads/${type}s/${filename}`;
+    const relativePath = `uploads/${type === "excel" ? "excels" : type + "s"}/${filename}`;
 
     console.log(
       `  💾 File saved: ${relativePath} (${(buffer.length / 1024).toFixed(2)} KB)`,
