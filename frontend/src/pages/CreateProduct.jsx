@@ -17,6 +17,7 @@ import {
   Sparkles,
   FolderOpen,
   Clock,
+  FileSpreadsheet,
 } from "lucide-react";
 
 // ================================================================
@@ -251,6 +252,12 @@ const examples = [
   },
 ];
 
+const getFileType = (pdfPath) => {
+  if (!pdfPath) return "pdf";
+  if (pdfPath.endsWith(".xlsx")) return "excel";
+  return "pdf";
+};
+
 // ================================================================
 // ✅ COOLDOWN CONFIGURATION
 // ================================================================
@@ -285,6 +292,7 @@ const CreateProduct = () => {
 
   // Track if generation is in progress (prevents multiple generations)
   const isGeneratingRef = useRef(false);
+
 
   // Track progress for live updates
   const [liveProgress, setLiveProgress] = useState({
@@ -384,12 +392,13 @@ const CreateProduct = () => {
   });
 
   const selectedType = productTypes.find((t) => t.id === formData.productType);
+  const isExcel = getFileType(formData?.pdfPath) === "excel";
 
   // ✅ Check cooldown on mount
   useEffect(() => {
     const checkCooldown = async () => {
       try {
-        const response = await api.get('/products/cooldown');
+        const response = await api.get("/products/cooldown");
         if (response.data?.success) {
           const { canGenerate, remainingMinutes } = response.data.data;
           if (!canGenerate && remainingMinutes > 0) {
@@ -397,7 +406,7 @@ const CreateProduct = () => {
           }
         }
       } catch (error) {
-        console.error('Cooldown check failed:', error);
+        console.error("Cooldown check failed:", error);
       }
     };
     checkCooldown();
@@ -407,7 +416,7 @@ const CreateProduct = () => {
   useEffect(() => {
     if (cooldownRemaining > 0) {
       const timer = setInterval(() => {
-        setCooldownRemaining(prev => {
+        setCooldownRemaining((prev) => {
           if (prev <= 1) {
             clearInterval(timer);
             return 0;
@@ -415,7 +424,7 @@ const CreateProduct = () => {
           return prev - 1;
         });
       }, 60000); // Update every minute
-      
+
       setCooldownTimer(timer);
       return () => clearInterval(timer);
     }
@@ -575,7 +584,9 @@ const CreateProduct = () => {
 
           // ✅ Start cooldown after completion
           setCooldownRemaining(GENERATION_COOLDOWN_MINUTES);
-          toast.success(`🎉 Product ready! Next generation available in ${GENERATION_COOLDOWN_MINUTES} minutes.`);
+          toast.success(
+            `🎉 Product ready! Next generation available in ${GENERATION_COOLDOWN_MINUTES} minutes.`,
+          );
 
           localStorage.removeItem("generatingProductId");
           localStorage.removeItem("generationProgress");
@@ -664,7 +675,9 @@ const CreateProduct = () => {
 
     // ✅ Check cooldown
     if (cooldownRemaining > 0) {
-      toast.error(`⏳ Please wait ${cooldownRemaining} more minute${cooldownRemaining > 1 ? 's' : ''} before generating another product.`);
+      toast.error(
+        `⏳ Please wait ${cooldownRemaining} more minute${cooldownRemaining > 1 ? "s" : ""} before generating another product.`,
+      );
       return;
     }
 
@@ -771,7 +784,6 @@ const CreateProduct = () => {
     }
   };
 
-  // Download PDF function
   const downloadPDF = async () => {
     if (!productId) {
       toast.error("No product found to download");
@@ -786,19 +798,24 @@ const CreateProduct = () => {
         responseType: "blob",
       });
 
+      // ✅ Detect extension from path
+      const isExcel = formData.pdfPath?.endsWith(".xlsx");
+      const extension = isExcel ? "xlsx" : "pdf";
+      const fileName = `${formData.title || "product"}.${extension}`;
+
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement("a");
       link.href = url;
-      link.setAttribute("download", `${formData.title || "product"}.pdf`);
+      link.setAttribute("download", fileName);
       document.body.appendChild(link);
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
 
-      toast.success("✅ PDF downloaded!");
+      toast.success(`✅ ${isExcel ? "Excel" : "PDF"} downloaded!`);
     } catch (error) {
       console.error("Download error:", error);
-      toast.error("Failed to download PDF");
+      toast.error("Failed to download file");
     } finally {
       setLoading(false);
     }
@@ -938,27 +955,27 @@ const CreateProduct = () => {
                 Success
               </h2>
               <p className="text-[#6B7280] text-[15px] leading-relaxed mb-4">
-                Your product has been generated successfully and is ready to
-                view.
+                {isExcel
+                  ? "Your spreadsheet has been generated successfully and is ready to download."
+                  : "Your product has been generated successfully and is ready to view."}
               </p>
-
-              {/* ✅ Cooldown Notice */}
-              {cooldownRemaining > 0 && (
-                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-4 flex items-center gap-2 justify-center">
-                  <Clock className="w-4 h-4 text-amber-600" />
-                  <p className="text-xs text-amber-700">
-                    Next generation available in <strong>{cooldownRemaining} minute{cooldownRemaining > 1 ? 's' : ''}</strong>
-                  </p>
-                </div>
-              )}
 
               <div className="flex gap-3">
                 <button
                   onClick={downloadPDF}
                   className="w-full bg-[#111111] text-white font-medium text-sm py-3 rounded-xl hover:bg-[#222222] transition-colors duration-200 shadow-sm flex items-center justify-center gap-2"
                 >
-                  <Download className="w-4 h-4" />
-                  Download PDF
+                  {isExcel ? (
+                    <>
+                      <FileSpreadsheet className="w-4 h-4" />
+                      Download Excel
+                    </>
+                  ) : (
+                    <>
+                      <Download className="w-4 h-4" />
+                      Download PDF
+                    </>
+                  )}
                 </button>
 
                 <button
@@ -1000,9 +1017,16 @@ const CreateProduct = () => {
               <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 mb-4 flex items-center gap-3">
                 <Clock className="w-5 h-5 text-amber-600" />
                 <div>
-                  <p className="text-sm font-medium text-amber-800">Generation Cooldown Active</p>
+                  <p className="text-sm font-medium text-amber-800">
+                    Generation Cooldown Active
+                  </p>
                   <p className="text-xs text-amber-700">
-                    Please wait <strong>{cooldownRemaining} minute{cooldownRemaining > 1 ? 's' : ''}</strong> before generating another product.
+                    Please wait{" "}
+                    <strong>
+                      {cooldownRemaining} minute
+                      {cooldownRemaining > 1 ? "s" : ""}
+                    </strong>{" "}
+                    before generating another product.
                   </p>
                 </div>
                 <span className="ml-auto text-lg font-bold text-amber-700">
@@ -1071,7 +1095,7 @@ const CreateProduct = () => {
                             isSelected
                               ? "border-[#FACC15] bg-[#FACC15]/5 shadow-[0_0_0_1px_rgba(250,204,21,.2)]"
                               : "border-[#E5E7EB] bg-white hover:border-[#FACC15]/50"
-                          } ${(generating || cooldownRemaining > 0) ? "opacity-50 cursor-not-allowed" : ""}`}
+                          } ${generating || cooldownRemaining > 0 ? "opacity-50 cursor-not-allowed" : ""}`}
                         >
                           {isSelected && (
                             <span className="absolute right-[6px] top-[6px] flex h-[14px] w-[14px] items-center justify-center rounded-full bg-[#FACC15]">
