@@ -555,23 +555,39 @@ exports.downloadPDF = async (req, res) => {
     if (!product.pdfPath || !fs.existsSync(product.pdfPath)) {
       return res.status(404).json({
         success: false,
-        message: "PDF not found. Please generate the product first.",
+        message: "File not found. Please generate the product first.",
       });
     }
 
-    const pdfBuffer = fs.readFileSync(product.pdfPath);
-    const fileName = `${product.title || "product"}.pdf`;
+    const fileBuffer = fs.readFileSync(product.pdfPath);
 
-    res.setHeader("Content-Type", "application/pdf");
-    res.setHeader(
-      "Content-Disposition",
-      `attachment; filename="${encodeURIComponent(fileName)}"`,
-    );
-    res.setHeader("Content-Length", pdfBuffer.length);
+    // ✅ Detect type from file extension
+    const isExcel = product.pdfPath.endsWith(".xlsx");
+
+    if (isExcel) {
+      const fileName = `${product.title || "spreadsheet"}.xlsx`;
+      res.setHeader(
+        "Content-Type",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      );
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="${encodeURIComponent(fileName)}"`,
+      );
+    } else {
+      const fileName = `${product.title || "product"}.pdf`;
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="${encodeURIComponent(fileName)}"`,
+      );
+    }
+
+    res.setHeader("Content-Length", fileBuffer.length);
     res.setHeader("Cache-Control", "no-cache");
     res.setHeader("Pragma", "no-cache");
 
-    res.send(pdfBuffer);
+    res.send(fileBuffer);
   } catch (error) {
     console.error("❌ Download failed:", error);
     res.status(500).json({
@@ -580,7 +596,6 @@ exports.downloadPDF = async (req, res) => {
     });
   }
 };
-
 // ================================================================
 // GET MARKETING CONTENT
 // ================================================================
