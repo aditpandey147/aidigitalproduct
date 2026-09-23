@@ -37,7 +37,8 @@ import {
   X,
   Image as ImageIcon,
   FolderOpen,
-  File
+  File,
+  FileSpreadsheet, // ✅ ADDED
 } from 'lucide-react';
 
 const ProductEditor = () => {
@@ -58,6 +59,22 @@ const ProductEditor = () => {
 
   const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:5000';
 
+  // ✅ Helper: Detect if product is Excel
+  const isExcelProduct = (product) => {
+    const path = product?.pdfPath || product?.filePath || "";
+    return path.endsWith(".xlsx");
+  };
+
+  // ✅ Helper: Get file label
+  const getFileLabel = (product) => {
+    return isExcelProduct(product) ? "Excel" : "PDF";
+  };
+
+  // ✅ Helper: Get file extension
+  const getFileExtension = (product) => {
+    return isExcelProduct(product) ? "xlsx" : "pdf";
+  };
+
   useEffect(() => {
     fetchProduct();
   }, [productId]);
@@ -71,14 +88,14 @@ const ProductEditor = () => {
       setLoading(true);
       const response = await api.get(`/products/${productId}`);
       let productData = response.data?.data || response.data;
-      
+
       try {
         const marketingResponse = await api.get(`/products/${productId}/marketing`);
         setMarketingData(marketingResponse.data.data);
       } catch (error) {
         console.log('No marketing data available');
       }
-      
+
       setProduct(productData);
     } catch (error) {
       console.error('Error fetching product:', error);
@@ -89,18 +106,26 @@ const ProductEditor = () => {
   };
 
   // ================================================================
-  // PDF PREVIEW
+  // ✅ FILE PREVIEW (Only for PDF)
   // ================================================================
 
-  const handlePdfPreview = async () => {
+  const handleFilePreview = async () => {
     if (!productId) return;
-    
+
+    // ✅ Excel files can't be previewed in iframe
+    if (isExcelProduct(product)) {
+      toast.info("Excel files can't be previewed. Please download to view.", {
+        duration: 3000,
+      });
+      return;
+    }
+
     try {
       setLoadingPdf(true);
       const response = await api.get(`/products/${productId}/download`, {
         responseType: 'blob',
       });
-      
+
       const blob = new Blob([response.data], { type: 'application/pdf' });
       const url = URL.createObjectURL(blob);
       setPdfUrl(url);
@@ -114,32 +139,42 @@ const ProductEditor = () => {
   };
 
   // ================================================================
-  // DOWNLOAD PDF
+  // ✅ DOWNLOAD FILE (PDF or Excel)
   // ================================================================
 
-  const downloadPDF = async () => {
+  const downloadFile = async () => {
     if (!productId) return;
-    
+
+    const isExcel = isExcelProduct(product);
+    const extension = getFileExtension(product);
+    const fileLabel = getFileLabel(product);
+
     try {
+      toast.loading(`📥 Preparing ${fileLabel} download...`, { duration: 2000 });
+
       const response = await api.get(`/products/${productId}/download`, {
         responseType: 'blob',
       });
-      
+
       const url = URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `${product.title || 'product'}.pdf`);
+      link.setAttribute('download', `${product.title || 'product'}.${extension}`);
       document.body.appendChild(link);
       link.click();
       link.remove();
       URL.revokeObjectURL(url);
-      
-      toast.success('PDF downloaded!');
+
+      toast.success(`✅ ${fileLabel} downloaded!`);
     } catch (error) {
       console.error('Download error:', error);
-      toast.error('Failed to download PDF');
+      toast.error(`Failed to download ${fileLabel}`);
     }
   };
+
+  // Keep alias for existing calls
+  const downloadPDF = downloadFile;
+  const handlePdfPreview = handleFilePreview;
 
   // ================================================================
   // COPY TO CLIPBOARD
@@ -174,44 +209,44 @@ const ProductEditor = () => {
 
   const getStatusConfig = (status) => {
     const map = {
-      'completed': { 
-        icon: CheckCircle, 
-        label: 'Ready', 
+      'completed': {
+        icon: CheckCircle,
+        label: 'Ready',
         color: 'text-green-600',
         bg: 'bg-green-50',
         border: 'border-green-200'
       },
-      'in-progress': { 
-        icon: Clock, 
-        label: 'In Progress', 
+      'in-progress': {
+        icon: Clock,
+        label: 'In Progress',
         color: 'text-yellow-600',
         bg: 'bg-yellow-50',
         border: 'border-yellow-200'
       },
-      'draft': { 
-        icon: FileText, 
-        label: 'Draft', 
+      'draft': {
+        icon: FileText,
+        label: 'Draft',
         color: 'text-gray-600',
         bg: 'bg-gray-50',
         border: 'border-gray-200'
       },
-      'processing': { 
-        icon: RefreshCw, 
-        label: 'Processing', 
+      'processing': {
+        icon: RefreshCw,
+        label: 'Processing',
         color: 'text-blue-600',
         bg: 'bg-blue-50',
         border: 'border-blue-200'
       },
-      'generating': { 
-        icon: Sparkles, 
-        label: 'Generating', 
+      'generating': {
+        icon: Sparkles,
+        label: 'Generating',
         color: 'text-purple-600',
         bg: 'bg-purple-50',
         border: 'border-purple-200'
       },
-      'failed': { 
-        icon: AlertCircle, 
-        label: 'Failed', 
+      'failed': {
+        icon: AlertCircle,
+        label: 'Failed',
         color: 'text-red-600',
         bg: 'bg-red-50',
         border: 'border-red-200'
@@ -257,9 +292,9 @@ const ProductEditor = () => {
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-      month: 'short', 
-      day: 'numeric', 
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
       year: 'numeric',
       hour: '2-digit',
       minute: '2-digit'
@@ -278,6 +313,8 @@ const ProductEditor = () => {
   const stats = getStats();
   const statusConfig = getStatusConfig(product?.status);
   const coverImageUrl = getImageUrl(product?.coverImage);
+  const isExcel = isExcelProduct(product); // ✅ Detect Excel
+  const fileLabel = getFileLabel(product); // ✅ "Excel" or "PDF"
 
   // ================================================================
   // COPY BUTTON COMPONENT
@@ -306,8 +343,8 @@ const ProductEditor = () => {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
         <div className="relative max-w-4xl w-full max-h-[90vh]">
-          <button 
-            onClick={onClose} 
+          <button
+            onClick={onClose}
             className="absolute -top-12 right-0 text-white hover:text-gray-300 transition p-2"
           >
             <X size={24} />
@@ -320,9 +357,9 @@ const ProductEditor = () => {
               </button>
             </div>
             <div className="p-4 flex justify-center items-center bg-[#F8F8F6]">
-              <img 
-                src={image} 
-                alt={title || 'Image'} 
+              <img
+                src={image}
+                alt={title || 'Image'}
                 className="max-w-full max-h-[70vh] object-contain rounded-lg"
               />
             </div>
@@ -356,7 +393,6 @@ const ProductEditor = () => {
           </div>
 
           <div className="p-6 overflow-y-auto max-h-[70vh] space-y-6">
-            {/* Emails */}
             {data.emails?.length > 0 && (
               <div>
                 <h3 className="text-sm font-semibold text-[#6B7280] uppercase tracking-wider mb-3 flex items-center gap-2">
@@ -383,7 +419,6 @@ const ProductEditor = () => {
               </div>
             )}
 
-            {/* Social Posts */}
             {data.social?.length > 0 && (
               <div>
                 <h3 className="text-sm font-semibold text-[#6B7280] uppercase tracking-wider mb-3 flex items-center gap-2">
@@ -411,7 +446,6 @@ const ProductEditor = () => {
               </div>
             )}
 
-            {/* Ads */}
             {data.ads?.length > 0 && (
               <div>
                 <h3 className="text-sm font-semibold text-[#6B7280] uppercase tracking-wider mb-3 flex items-center gap-2">
@@ -440,7 +474,6 @@ const ProductEditor = () => {
               </div>
             )}
 
-            {/* SEO */}
             {data.seo && (
               <div>
                 <h3 className="text-sm font-semibold text-[#6B7280] uppercase tracking-wider mb-3 flex items-center gap-2">
@@ -529,7 +562,10 @@ const ProductEditor = () => {
               </h2>
             </div>
             <div className="flex items-center gap-2">
-              <button onClick={downloadPDF} className="px-4 py-2 bg-[#FACC15] text-[#111111] rounded-xl hover:bg-[#e5b800] transition font-medium text-sm flex items-center gap-2">
+              <button
+                onClick={downloadFile}
+                className="px-4 py-2 bg-[#FACC15] text-[#111111] rounded-xl hover:bg-[#e5b800] transition font-medium text-sm flex items-center gap-2"
+              >
                 <Download size={16} />
                 Download
               </button>
@@ -598,7 +634,7 @@ const ProductEditor = () => {
         <Navbar />
         <main className="flex-1 overflow-y-auto p-4 md:p-6">
           <div className="max-w-6xl mx-auto">
-            
+
             {/* ===== HEADER ===== */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
               <div className="flex items-center gap-3">
@@ -633,11 +669,30 @@ const ProductEditor = () => {
               <div className="flex gap-2 flex-wrap">
                 {product.status === 'completed' && (
                   <>
-                    <button onClick={handlePdfPreview} className="px-4 py-2 bg-[#111111] hover:bg-[#222] text-white rounded-xl transition font-medium text-sm flex items-center gap-2">
-                      <Eye size={16} /> Preview PDF
-                    </button>
-                    <button onClick={downloadPDF} className="px-4 py-2 bg-[#FACC15] hover:bg-[#e5b800] text-[#111111] rounded-xl transition font-medium text-sm flex items-center gap-2">
-                      <Download size={16} /> Download PDF
+                    {/* ✅ Preview button only for PDF */}
+                    {!isExcel && (
+                      <button onClick={handleFilePreview} className="px-4 py-2 bg-[#111111] hover:bg-[#222] text-white rounded-xl transition font-medium text-sm flex items-center gap-2">
+                        <Eye size={16} /> Preview PDF
+                      </button>
+                    )}
+                    {/* ✅ Download button changes label */}
+                    <button
+                      onClick={downloadFile}
+                      className={`px-4 py-2 rounded-xl transition font-medium text-sm flex items-center gap-2 ${
+                        isExcel
+                          ? "bg-emerald-500 hover:bg-emerald-600 text-white"
+                          : "bg-[#FACC15] hover:bg-[#e5b800] text-[#111111]"
+                      }`}
+                    >
+                      {isExcel ? (
+                        <>
+                          <FileSpreadsheet size={16} /> Download Excel
+                        </>
+                      ) : (
+                        <>
+                          <Download size={16} /> Download PDF
+                        </>
+                      )}
                     </button>
                     <button onClick={() => setShowMarketingModal(true)} className="px-4 py-2 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-xl transition font-medium text-sm flex items-center gap-2">
                       <Megaphone size={16} /> Marketing Kit
@@ -678,7 +733,7 @@ const ProductEditor = () => {
               </div>
             </div>
 
-            {/* ===== TABS - ONLY 3 ===== */}
+            {/* ===== TABS ===== */}
             <div className="bg-white rounded-2xl shadow-sm border border-[#E5E7EB] overflow-hidden">
               <div className="border-b border-[#E5E7EB] flex overflow-x-auto bg-[#F8F8F6]">
                 {[
@@ -704,24 +759,38 @@ const ProductEditor = () => {
 
               {/* ===== TAB CONTENT ===== */}
               <div className="p-6">
-                
-                {/* ============================================================ */}
+
                 {/* TAB 1: PRODUCT */}
-                {/* ============================================================ */}
                 {activeTab === 'product' && (
                   <div className="space-y-6">
-                    {/* Quick Actions */}
                     <div>
                       <h3 className="text-sm font-semibold text-[#6B7280] uppercase tracking-wider mb-3">Quick Actions</h3>
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                         <button onClick={() => toast.success('Edit content coming soon!')} className="p-4 bg-[#FACC15]/10 border border-[#FACC15]/20 rounded-xl hover:bg-[#FACC15]/20 transition text-sm font-medium flex items-center gap-2 justify-center">
                           <Edit size={18} /> Edit Content
                         </button>
-                        <button onClick={handlePdfPreview} className="p-4 bg-blue-50 border border-blue-100 rounded-xl hover:bg-blue-100 transition text-sm font-medium flex items-center gap-2 justify-center">
-                          <Eye size={18} /> Preview PDF
-                        </button>
-                        <button onClick={downloadPDF} className="p-4 bg-[#FACC15]/10 border border-[#FACC15]/20 rounded-xl hover:bg-[#FACC15]/20 transition text-sm font-medium flex items-center gap-2 justify-center">
-                          <Download size={18} /> Download PDF
+                        {!isExcel && (
+                          <button onClick={handleFilePreview} className="p-4 bg-blue-50 border border-blue-100 rounded-xl hover:bg-blue-100 transition text-sm font-medium flex items-center gap-2 justify-center">
+                            <Eye size={18} /> Preview PDF
+                          </button>
+                        )}
+                        <button
+                          onClick={downloadFile}
+                          className={`p-4 rounded-xl transition text-sm font-medium flex items-center gap-2 justify-center ${
+                            isExcel
+                              ? "bg-emerald-50 border border-emerald-100 hover:bg-emerald-100"
+                              : "bg-[#FACC15]/10 border border-[#FACC15]/20 hover:bg-[#FACC15]/20"
+                          }`}
+                        >
+                          {isExcel ? (
+                            <>
+                              <FileSpreadsheet size={18} /> Download Excel
+                            </>
+                          ) : (
+                            <>
+                              <Download size={18} /> Download PDF
+                            </>
+                          )}
                         </button>
                         <button onClick={() => setShowMarketingModal(true)} className="p-4 bg-green-50 border border-green-100 rounded-xl hover:bg-green-100 transition text-sm font-medium flex items-center gap-2 justify-center">
                           <Megaphone size={18} /> Marketing Kit
@@ -729,7 +798,6 @@ const ProductEditor = () => {
                       </div>
                     </div>
 
-                    {/* Product Details */}
                     <div>
                       <h3 className="text-sm font-semibold text-[#6B7280] uppercase tracking-wider mb-3">Product Details</h3>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -742,7 +810,6 @@ const ProductEditor = () => {
                       </div>
                     </div>
 
-                    {/* Outline */}
                     <div>
                       <h3 className="text-sm font-semibold text-[#6B7280] uppercase tracking-wider mb-3 flex items-center gap-2">
                         <List size={16} className="text-[#FACC15]" /> Outline
@@ -766,7 +833,6 @@ const ProductEditor = () => {
                       )}
                     </div>
 
-                    {/* Generating Status */}
                     {product.status === 'generating' && (
                       <div className="bg-purple-50 border border-purple-200 rounded-xl p-4">
                         <div className="flex items-center justify-between mb-2">
@@ -782,12 +848,9 @@ const ProductEditor = () => {
                   </div>
                 )}
 
-                {/* ============================================================ */}
                 {/* TAB 2: IMAGES */}
-                {/* ============================================================ */}
                 {activeTab === 'images' && (
                   <div className="space-y-6">
-                    {/* Cover Image */}
                     <div>
                       <h3 className="text-sm font-semibold text-[#6B7280] uppercase tracking-wider mb-3 flex items-center gap-2">
                         <FolderOpen size={16} className="text-[#FACC15]" /> Cover Image
@@ -796,9 +859,9 @@ const ProductEditor = () => {
                         <div className="relative w-48 h-64 rounded-xl overflow-hidden border border-[#E5E7EB] group cursor-pointer"
                           onClick={() => setSelectedImage(getImageUrl(product.coverImage))}
                         >
-                          <img 
-                            src={getImageUrl(product.coverImage)} 
-                            alt="Cover" 
+                          <img
+                            src={getImageUrl(product.coverImage)}
+                            alt="Cover"
                             className="w-full h-full object-cover"
                           />
                           <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
@@ -813,7 +876,6 @@ const ProductEditor = () => {
                       )}
                     </div>
 
-                    {/* Mockups */}
                     {product.mockups?.length > 0 && (
                       <div>
                         <h3 className="text-sm font-semibold text-[#6B7280] uppercase tracking-wider mb-3 flex items-center gap-2">
@@ -825,9 +887,9 @@ const ProductEditor = () => {
                               onClick={() => setSelectedImage(getImageUrl(mockup.path))}
                             >
                               <div className="relative h-48 bg-[#F8F8F6]">
-                                <img 
-                                  src={getImageUrl(mockup.path)} 
-                                  alt={`Mockup ${index + 1}`} 
+                                <img
+                                  src={getImageUrl(mockup.path)}
+                                  alt={`Mockup ${index + 1}`}
                                   className="w-full h-full object-contain p-2"
                                 />
                                 <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
@@ -839,7 +901,7 @@ const ProductEditor = () => {
                                   <span className="text-xs font-medium text-[#6B7280] capitalize">{mockup.type || 'Mockup'}</span>
                                   <span className="text-xs text-[#6B7280] ml-2">• Mockup {index + 1}</span>
                                 </div>
-                                <button 
+                                <button
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     copyToClipboard(mockup.prompt || '', `mockup-prompt-${index}`);
@@ -855,7 +917,6 @@ const ProductEditor = () => {
                       </div>
                     )}
 
-                    {/* Posters */}
                     {product.posters?.length > 0 && (
                       <div>
                         <h3 className="text-sm font-semibold text-[#6B7280] uppercase tracking-wider mb-3 flex items-center gap-2">
@@ -867,9 +928,9 @@ const ProductEditor = () => {
                               onClick={() => setSelectedImage(getImageUrl(poster.path))}
                             >
                               <div className="relative h-48 bg-[#F8F8F6]">
-                                <img 
-                                  src={getImageUrl(poster.path)} 
-                                  alt={`Poster ${index + 1}`} 
+                                <img
+                                  src={getImageUrl(poster.path)}
+                                  alt={`Poster ${index + 1}`}
                                   className="w-full h-full object-contain p-2"
                                 />
                                 <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
@@ -881,7 +942,7 @@ const ProductEditor = () => {
                                   <span className="text-xs font-medium text-[#6B7280] capitalize">{poster.type || 'Poster'}</span>
                                   <span className="text-xs text-[#6B7280] ml-2">• Poster {index + 1}</span>
                                 </div>
-                                <button 
+                                <button
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     copyToClipboard(poster.prompt || '', `poster-prompt-${index}`);
@@ -907,14 +968,11 @@ const ProductEditor = () => {
                   </div>
                 )}
 
-                {/* ============================================================ */}
                 {/* TAB 3: MARKETING */}
-                {/* ============================================================ */}
                 {activeTab === 'marketing' && (
                   <div className="space-y-4">
                     {marketingData ? (
                       <div className="space-y-6">
-                        {/* Emails */}
                         {marketingData.emails?.length > 0 && (
                           <div>
                             <h3 className="text-sm font-semibold text-[#6B7280] uppercase tracking-wider mb-3 flex items-center gap-2">
@@ -940,7 +998,6 @@ const ProductEditor = () => {
                           </div>
                         )}
 
-                        {/* Social Posts */}
                         {marketingData.social?.length > 0 && (
                           <div>
                             <h3 className="text-sm font-semibold text-[#6B7280] uppercase tracking-wider mb-3 flex items-center gap-2">
@@ -965,7 +1022,6 @@ const ProductEditor = () => {
                           </div>
                         )}
 
-                        {/* Ads */}
                         {marketingData.ads?.length > 0 && (
                           <div>
                             <h3 className="text-sm font-semibold text-[#6B7280] uppercase tracking-wider mb-3 flex items-center gap-2">
@@ -989,7 +1045,6 @@ const ProductEditor = () => {
                           </div>
                         )}
 
-                        {/* SEO */}
                         {marketingData.seo && (
                           <div>
                             <h3 className="text-sm font-semibold text-[#6B7280] uppercase tracking-wider mb-3 flex items-center gap-2">
@@ -1043,31 +1098,31 @@ const ProductEditor = () => {
       </div>
 
       {/* ===== PDF PREVIEW MODAL ===== */}
-      <PdfPreviewModal 
-        isOpen={showPdfPreview} 
-        onClose={() => { 
-          setShowPdfPreview(false); 
-          if (pdfUrl) { 
-            URL.revokeObjectURL(pdfUrl); 
-            setPdfUrl(null); 
-          } 
-        }} 
-        pdfUrl={pdfUrl} 
-        title={product?.title} 
+      <PdfPreviewModal
+        isOpen={showPdfPreview}
+        onClose={() => {
+          setShowPdfPreview(false);
+          if (pdfUrl) {
+            URL.revokeObjectURL(pdfUrl);
+            setPdfUrl(null);
+          }
+        }}
+        pdfUrl={pdfUrl}
+        title={product?.title}
       />
 
       {/* ===== MARKETING KIT MODAL ===== */}
-      <MarketingKitModal 
-        isOpen={showMarketingModal} 
-        onClose={() => setShowMarketingModal(false)} 
-        data={marketingData} 
+      <MarketingKitModal
+        isOpen={showMarketingModal}
+        onClose={() => setShowMarketingModal(false)}
+        data={marketingData}
       />
 
       {/* ===== IMAGE GALLERY MODAL ===== */}
-      <ImageGalleryModal 
-        isOpen={!!selectedImage} 
-        onClose={() => setSelectedImage(null)} 
-        image={selectedImage} 
+      <ImageGalleryModal
+        isOpen={!!selectedImage}
+        onClose={() => setSelectedImage(null)}
+        image={selectedImage}
         title="Image Preview"
       />
     </div>
