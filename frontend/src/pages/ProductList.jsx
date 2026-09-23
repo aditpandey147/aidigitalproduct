@@ -21,6 +21,7 @@ import {
   Plus,
   Search,
   ArrowRight,
+  FileSpreadsheet, // ✅ ADDED
 } from "lucide-react";
 
 const ProductList = () => {
@@ -38,6 +39,22 @@ const ProductList = () => {
 
   // ✅ Get server URL
   const SERVER_URL = import.meta.env.VITE_SERVER_URL || "http://localhost:5000";
+
+  // ✅ Helper: Detect if product is Excel
+  const isExcelProduct = (product) => {
+    const path = product?.pdfPath || product?.filePath || "";
+    return path.endsWith(".xlsx");
+  };
+
+  // ✅ Helper: Get file type label
+  const getFileLabel = (product) => {
+    return isExcelProduct(product) ? "Excel" : "PDF";
+  };
+
+  // ✅ Helper: Get file extension
+  const getFileExtension = (product) => {
+    return isExcelProduct(product) ? "xlsx" : "pdf";
+  };
 
   // ✅ Helper: Get full cover image URL
   const getCoverImageUrl = (coverImagePath) => {
@@ -247,13 +264,12 @@ const ProductList = () => {
     });
   };
 
-  // ✅ FIXED: Delete function - properly handles product ID
+  // ✅ FIXED: Delete function
   const handleDelete = async () => {
     if (!selectedProduct) return;
-    
-    // Get the product ID correctly
+
     const productId = selectedProduct._id || selectedProduct.id;
-    
+
     if (!productId) {
       toast.error("Invalid product ID");
       return;
@@ -261,10 +277,9 @@ const ProductList = () => {
 
     try {
       await api.delete(`/products/${productId}`);
-      
-      // Remove from state - check both _id and id
-      setProducts(products.filter(p => (p._id || p.id) !== productId));
-      
+
+      setProducts(products.filter((p) => (p._id || p.id) !== productId));
+
       toast.success("Product deleted successfully");
       setShowDeleteModal(false);
       setSelectedProduct(null);
@@ -274,37 +289,50 @@ const ProductList = () => {
     }
   };
 
-  // ✅ Open delete modal
   const openDeleteModal = (product) => {
     setSelectedProduct(product);
     setShowDeleteModal(true);
   };
 
+  // ✅ FIXED: Download handler for both PDF and Excel
   const handleDownloadPDF = async (product) => {
     const productId = product._id || product.id;
     if (!productId) {
       toast.error("Invalid product ID");
       return;
     }
-    
+
+    const isExcel = isExcelProduct(product);
+    const extension = getFileExtension(product);
+    const fileTypeLabel = getFileLabel(product);
+
     try {
-      toast.loading("📥 Preparing download...", { duration: 2000 });
+      toast.loading(`📥 Preparing ${fileTypeLabel} download...`, {
+        duration: 2000,
+      });
+
       const response = await api.get(`/products/${productId}/download`, {
         responseType: "blob",
       });
 
+      // ✅ Use correct extension
+      const fileName = `${product.title || "product"}.${extension}`;
+
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement("a");
       link.href = url;
-      link.setAttribute("download", `${product.title || "product"}.pdf`);
+      link.setAttribute("download", fileName);
       document.body.appendChild(link);
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
-      toast.success("✅ PDF downloaded!");
+
+      toast.success(`✅ ${fileTypeLabel} downloaded!`);
     } catch (error) {
       console.error("Download error:", error);
-      toast.error(error.response?.data?.message || "Failed to download PDF");
+      toast.error(
+        error.response?.data?.message || `Failed to download ${fileTypeLabel}`,
+      );
     }
   };
 
@@ -705,14 +733,16 @@ const ProductList = () => {
                   const isExpanded = expandedProduct === productId;
                   const isMarketingLoading = loadingMarketing[productId];
                   const marketingDataItem = marketingData[productId];
+                  const isExcel = isExcelProduct(product); // ✅ Detect Excel
+                  const fileLabel = getFileLabel(product); // ✅ "Excel" or "PDF"
 
-                  const coverPath = 
-                    product.coverImage || 
-                    product.coverImageUrl || 
-                    product.cover || 
-                    product.image || 
+                  const coverPath =
+                    product.coverImage ||
+                    product.coverImageUrl ||
+                    product.cover ||
+                    product.image ||
                     null;
-                  
+
                   const coverImageUrl = getCoverImageUrl(coverPath);
                   const hasCoverImage = !!coverImageUrl;
 
@@ -735,7 +765,9 @@ const ProductList = () => {
                             className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-105"
                             loading="lazy"
                             onError={(e) => {
-                              console.error(`❌ Failed to load image: ${coverImageUrl}`);
+                              console.error(
+                                `❌ Failed to load image: ${coverImageUrl}`
+                              );
                               e.target.style.display = "none";
                             }}
                           />
@@ -743,7 +775,7 @@ const ProductList = () => {
                           <div className="flex flex-col items-center justify-center w-full h-full">
                             <span className="text-7xl drop-shadow-2xl transition-transform duration-500 group-hover:scale-110 group-hover:rotate-3">
                               {getFallbackEmoji(
-                                product.productType || product.type,
+                                product.productType || product.type
                               )}
                             </span>
                             <span className="text-xs text-[#6B7280] mt-2 font-medium bg-white/60 px-3 py-1 rounded-full backdrop-blur-sm">
@@ -803,9 +835,9 @@ const ProductList = () => {
                             </span>
                             <span
                               className="text-xs text-emerald-600"
-                              title="PDF"
+                              title={isExcel ? "Excel" : "PDF"}
                             >
-                              📄
+                              {isExcel ? "📊" : "📄"}
                             </span>
                             <span
                               className="text-xs text-emerald-600"
@@ -846,14 +878,26 @@ const ProductList = () => {
                           {product.status === "completed" && (
                             <button
                               onClick={() => handleDownloadPDF(product)}
-                              className="flex-1 bg-[#FACC15] hover:bg-[#e5b800] text-[#111111] text-sm font-medium py-2.5 rounded-xl transition flex items-center justify-center gap-2"
+                              className={`flex-1 text-[#111111] text-sm font-medium py-2.5 rounded-xl transition flex items-center justify-center gap-2 ${
+                                isExcel
+                                  ? "bg-emerald-500 hover:bg-emerald-600 text-white"
+                                  : "bg-[#FACC15] hover:bg-[#e5b800]"
+                              }`}
                             >
-                              <Download size={16} />
-                              PDF
+                              {isExcel ? (
+                                <>
+                                  <FileSpreadsheet size={16} />
+                                  Excel
+                                </>
+                              ) : (
+                                <>
+                                  <Download size={16} />
+                                  PDF
+                                </>
+                              )}
                             </button>
                           )}
 
-                          {/* ✅ FIXED: Delete button with proper handler */}
                           <button
                             onClick={() => openDeleteModal(product)}
                             className="px-3 bg-[#F8F8F6] hover:bg-rose-50 text-[#6B7280] hover:text-rose-600 py-2.5 rounded-xl transition"
